@@ -1,4 +1,5 @@
 import subprocess
+import os
 
 def capture_screen(device_id=None, output_path="screenshot.png"):
     """
@@ -31,8 +32,7 @@ def capture_screen(device_id=None, output_path="screenshot.png"):
     except FileNotFoundError:
         print("Erro: adb não encontrado. Certifique-se de que o Android SDK está instalado e no PATH.")
 
-
-# Exemplo de uso (substitua 'YOUR_DEVICE_ID' pelo ID do seu dispositivo, se tiver mais de um)
+# Exemplo de uso:
 # capture_screen(device_id='RXCTB03EXVK', output_path='screenshot.png')
 # capture_screen(output_path='screenshot.png') # Usando o dispositivo padrão
 
@@ -54,16 +54,46 @@ def simulate_touch(x, y, device_id=None):
     try:
         subprocess.run(command, check=True)
         print(f"Toque simulado nas coordenadas ({x}, {y}).")
-    except subprocess.CalledProcessError as e:
+    except subprocess.CalledCProcessError as e:
         print(f"Erro ao simular o toque: {e}")
     except FileNotFoundError:
         print("Erro: adb não encontrado. Certifique-se de que o Android SDK está instalado e no PATH.")
 
-# Exemplo de uso (substitua as coordenadas X e Y e o device_id, se necessário)
-# simulate_touch(500, 800, device_id='YOUR_DEVICE_ID')
-# Para usar com as coordenadas do centro da imagem detectada na célula anterior:
+# Exemplo de uso:
 # if image_position:
 #     x, y, w, h = image_position
 #     center_x = x + w // 2
 #     center_y = y + h // 2
-#     simulate_touch(center_x, center_y)
+#     simulate_touch(center_x, center_y, device_id='RXCTB03EXVK')
+
+
+def get_action_sequence(action_folder_path):
+    """
+    Lista os arquivos de imagem (.png) em uma pasta de ação, ordenados pelo nome.
+
+    Args:
+        action_folder_path (str): O caminho para a pasta contendo as imagens da sequência.
+    """
+    image_files = []
+    if not os.path.isdir(action_folder_path):
+        print(f"Erro: Pasta de ação não encontrada: {action_folder_path}")
+        return image_files
+
+    try:
+        # Lista todos os arquivos na pasta
+        files = os.listdir(action_folder_path)
+        # Filtra apenas os arquivos .png e ordena pelo nome
+        image_files = sorted([os.path.join(action_folder_path, f) for f in files if f.endswith('.png')])
+    except Exception as e:
+        print(f"Ocorreu um erro ao listar os arquivos na pasta {action_folder_path}: {e}")
+        return []
+
+    return image_files
+
+# Exemplo de uso:
+# Crie uma pasta chamada 'acoes/exemplo_acao' e coloque alguns arquivos .png nela
+# action_folder = "acoes/exemplo_acao"
+# sequence = get_action_sequence(action_folder)
+# print(f"Sequência de imagens encontrada: {sequence}")
+
+# Você precisará criar a pasta e os arquivos de imagem de exemplo para testar

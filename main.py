@@ -4,9 +4,9 @@ from adb_utils import capture_screen, simulate_touch
 from image_detection import find_image_on_screen
 
 # Configurações
-device_id = 'RXCTB03EXVK'  # Substitua pelo ID do seu dispositivo, se necessário
+device_id = 'RXCTB03EXVK'  # ID do seu dispositivo
 screenshot_file = "screenshot.png"
-template_file = "template.png"
+template_file = "template.png" # Este será substituído pela sequência de templates
 delay_seconds = 2  # Tempo de espera entre as iterações do loop
 
 import subprocess
