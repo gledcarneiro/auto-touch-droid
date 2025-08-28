@@ -1,6 +1,38 @@
-[
     [
-        1283,
-        522
+      {
+        "name": "Passo 1: Encontrar item para coleta",
+        "type": "template",
+        "template_file": "01_template.png",
+        "cordenates": [200, 300],
+        "action_before_find": {
+           "type": "scroll",
+           "direction": "up",
+           "duration_ms": 500
+        },
+        "action_on_found": "click",
+        "action_after_find": {
+           "type": "scroll",
+           "direction": "down",
+           "duration_ms": 500
+        },
+        "click_delay": 0.5
+      },
+      {
+        "name": "Passo 2: Encontrar botão de coletar (requer scroll)",
+        "type": "template",
+        "template_file": "02_template.png",
+        "cordenates": [100, 200],
+        "action_before_find": {
+           "type": "scroll",
+           "direction": "up",
+           "duration_ms": 500
+        },
+        "action_on_found": "click",
+        "action_after_find": {
+           "type": "scroll",
+           "direction": "down",
+           "duration_ms": 500
+        },
+        "click_delay": 0.5
+      }
     ]
-]
