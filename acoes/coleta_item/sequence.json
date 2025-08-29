@@ -1,38 +1,43 @@
-    [
-      {
-        "name": "Passo 1: Encontrar item para coleta",
+[
+    {
+        "name": "Passo 1: Template template_step_01.png",
         "type": "template",
-        "template_file": "01_template.png",
-        "cordenates": [200, 300],
-        "action_before_find": {
-           "type": "scroll",
-           "direction": "up",
-           "duration_ms": 500
-        },
+        "template_file": "template_step_01.png",
         "action_on_found": "click",
-        "action_after_find": {
-           "type": "scroll",
-           "direction": "down",
-           "duration_ms": 500
-        },
         "click_delay": 0.5
-      },
-      {
-        "name": "Passo 2: Encontrar botão de coletar (requer scroll)",
+    },
+    {
+        "name": "Passo 2: Template template_step_02.png",
         "type": "template",
-        "template_file": "02_template.png",
-        "cordenates": [100, 200],
-        "action_before_find": {
-           "type": "scroll",
-           "direction": "up",
-           "duration_ms": 500
-        },
+        "template_file": "template_step_02.png",
         "action_on_found": "click",
-        "action_after_find": {
-           "type": "scroll",
-           "direction": "down",
-           "duration_ms": 500
-        },
+        "click_delay": 0.5,
+        "action_before_find": {
+            "type": "scroll",
+            "direction": "up",
+            "duration_ms": 800,
+            "delay_after_scroll": 0.5
+        }
+    },
+    {
+        "name": "Passo 3: Template template_step_03.png",
+        "type": "template",
+        "template_file": "template_step_03.png",
+        "action_on_found": "click",
         "click_delay": 0.5
-      }
-    ]
+    },
+    {
+        "name": "Passo 4: Template template_step_04.png",
+        "type": "template",
+        "template_file": "template_step_04.png",
+        "action_on_found": "click",
+        "click_delay": 0.5
+    },
+    {
+        "name": "Passo 5: Template template_step_05.png",
+        "type": "template",
+        "template_file": "template_step_05.png",
+        "action_on_found": "click",
+        "click_delay": 0.5
+    }
+]

@@ -1,3 +1,9 @@
+# Nome do Arquivo: eee823d0_action_executor.py
+# Descrição: Contém a função principal para executar sequências de ações lidas de um arquivo sequence.json.
+# Versão: 01.00.03 -> Inclusão do ID da célula no nome do arquivo e descrição das alterações no campo Versão.
+# Analista: Gemini
+# Programador: Gled Carneiro
+# -----------------------------------------------------------------------------
 import time
 import os
 import json
@@ -283,13 +289,13 @@ def execultar_acoes(action_name, device_id=None):
 
         else:
             print(f"Erro: Passo {step_number} ('{step_name}') tem tipo '{step_type}' desconhecido ou faltando. Pulando passo.")
-            continue # Pula para o próximo passo se o tipo for inválido
+            continue # Pula para o próximo passo se o tipo for inválimentado
 
     print(f"\nExecução da ação '{action_name}' finalizada.")
 
 
 # Exemplo de uso (descomente para testar após criar a pasta da ação, templates e sequence.json):
-action_to_execute = "coleta_item" # Substitua pelo nome da ação
+action_to_execute = "sair_conta" # Substitua pelo nome da ação
 device_id_execution = 'RXCTB03EXVK' # Substitua pelo ID do seu dispositivo
 execultar_acoes(action_to_execute, device_id=device_id_execution)
 

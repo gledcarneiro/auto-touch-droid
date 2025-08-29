@@ -1,3 +1,9 @@
+# Nome do Arquivo: 42427df3_create_action_template.py
+# Descrição: Contém funções auxiliares para criar templates de imagem manualmente e gravar sequências assistidas.
+# Versão: 01.00.04 -> Inclusão de valores default para action_before_find e action_after_find em passos template gravados.
+# Analista: Gemini
+# Programador: Gled Carneiro
+# -----------------------------------------------------------------------------
 import cv2
 import subprocess
 import os
@@ -7,224 +13,276 @@ import shutil # Importar shutil para copiar arquivos
 import json # Importar json para lidar com arquivos de sequência
 
 # --- Funções auxiliares ---
-from adb_utils import simulate_touch, get_action_sequence, capture_screen
-# Importando a função de confirmação (Assumindo que find_and_confirm_click está disponível para importação)
-# Se find_and_confirm_click estiver em uma célula separada no notebook, você pode precisar executá-la primeiro.
-# Idealmente, find_and_confirm_click estaria em um arquivo .py separado (ex: action_executor.py) para importar.
-from action_executor import find_and_confirm_click # Assumindo que você salvou find_and_confirm_click em action_executor.py
+# Assumindo que adb_utils.py e action_executor.py estão acessíveis para importar
+from adb_utils import simulate_touch, get_touch_event_coordinates, capture_screen
+# from action_executor import find_and_confirm_click # Removido temporariamente se a lógica for separada
 
 # --- Configurações do Dispositivo ---
-# As configurações de getevent não são usadas para o recorte neste método,
-# mas podem ser úteis se a função find_image_on_screen as usar em algum momento.
-# Mantenho-as aqui por consistência, mas a escala de toque não afeta mais a criação do template.
+# Mantenho as configurações de getevent aqui por referência, embora não afetem diretamente a gravação de templates ou JSON
+# As coordenadas de toque RAW do getevent (se usadas para gravar coords diretas) precisam ser ajustadas.
 DEVICE_SCREEN_WIDTH = 2400 # Largura da tela em pixels (na orientação deitada, largura é a altura na retrato)
 DEVICE_SCREEN_HEIGHT = 1080 # Altura da tela em pixels (na orientação deitada, altura é a largura na retrato)
 GETEVENT_MAX_X = 4584 # Ajuste com base nos seus testes (maior X observado no teste central)
 GETEVENT_MAX_Y = 4218 # Ajuste com base nos seus testes (maior Y observado no teste central)
 # --- Fim das Configurações do Dispositivo ---
 
-# --- Script Principal para Captura de Screenshot e Espera por Template Manual ---
-def create_action_template_manual_crop(action_name, device_id=None):
+
+# --- Função para criar template manualmente (recortando de screenshot) ---
+def create_action_template_manual_crop(action_name, step_number, device_id=None):
     """
-    Script auxiliar para capturar a tela do Android, salvar como arquivo temporário,
-    e aguardar que o usuário crie manualmente um template 'template.png' na pasta da ação.
-    O script testa o template, copia se for bem-sucedido e renomeia a cópia.
-    Se o teste for bem-sucedido, também salva as coordenadas do centro da imagem encontrada
-    em um arquivo sequence.json na pasta da ação.
+    Captura a tela do dispositivo, salva como screenshot_temp_<step_number>.png
+    e instrui o usuário a recortar a imagem do template manualmente, salvando-a
+    com um nome sequencial na pasta da ação.
 
     Args:
-        action_name (str): O nome da ação (será usado para criar a pasta e prefixo do arquivo).
+        action_name (str): O nome da ação (será usado para criar/acessar a pasta).
+        step_number (int): O número do passo atual na sequência (usado para nomes de arquivo).
         device_id (str, optional): O ID do dispositivo Android.
+
+    Returns:
+        str: O caminho completo para o arquivo de template criado, ou None em caso de falha.
     """
-    # --- Usar a pasta de ações unificada ---
-    action_folder = os.path.join("acoes", action_name) # Agora dentro da pasta 'acoes'
+    action_folder = os.path.join("acoes", action_name)
     if not os.path.exists(action_folder):
         os.makedirs(action_folder)
         print(f"Pasta de ação '{action_folder}' criada/verificada.")
 
-    # Caminho para o arquivo de sequência JSON
-    sequence_filepath = os.path.join(action_folder, "sequence.json")
+    screenshot_temp_path = os.path.join(action_folder, f"screenshot_temp_{step_number:02d}.png") # Screenshot temporária na pasta da ação
+    template_manual_path = os.path.join(action_folder, f"template_step_{step_number:02d}.png") # Nome sugerido para o template manual
 
-    print(f"\n--- Modo de criação de templates por recorte manual e gravação de coordenadas para a ação: {action_name} ---")
-    print("Prepare a tela do seu dispositivo Android para o próximo passo da ação.")
-    print("Pressione 'Enter' no terminal para capturar a tela.")
-    print("Pressione 'q' e depois 'Enter' para sair a qualquer momento.")
+    print(f"\n--- Criando Template Manual para o Passo {step_number} da ação '{action_name}' ---")
+    print("Prepare a tela do seu dispositivo para o estado deste passo.")
+    input("Pressione 'Enter' para capturar a tela para criar o template...")
 
-    step_counter = 1
-    # Determine the next sequential filename based on existing files
-    # Agora procurando por arquivos .png que seguem o padrão XX_template.png na pasta de ação unificada
-    existing_files = get_action_sequence(action_folder)
-    if existing_files:
-        # Filtra apenas os arquivos .png que seguem o padrão XX_template.png
-        template_files = sorted([f for f in existing_files if os.path.basename(f).endswith('.png') and re.match(r'\d+_template\.png', os.path.basename(f))])
+    if capture_screen(device_id=device_id, output_path=screenshot_temp_path):
+        print(f"\nScreenshot capturada e salva como '{screenshot_temp_path}'.")
+        print(f"\n--> INSTRUÇÕES <--")
+        print(f"1. Abra o arquivo '{screenshot_temp_path}' em um editor de imagem.")
+        print(f"2. Recorte a área exata que você quer usar como template para este passo.")
+        print(f"3. Salve o recorte como '{os.path.basename(template_manual_path)}' DENTRO da pasta da ação: '{action_folder}'")
+        print(f"4. Volte aqui e aguarde. O script detectará o arquivo.")
+        print(f"------------------")
 
-        if template_files:
-            last_file = os.path.basename(template_files[-1])
-            try:
-                # Extract the number from the filename (e.g., 01_template.png)
-                last_num_match = re.match(r'(\d+)_', last_file)
-                if last_num_match:
-                    last_num = int(last_num_match.group(1))
-                    step_counter = last_num + 1
-                else:
-                     print("Aviso: Não foi possível determinar o próximo número sequencial a partir dos nomes de arquivos existentes. Iniciando do 1.")
-                     step_counter = 1 # Reset if file names don't follow the pattern
-            except (ValueError, IndexError):
-                 print("Aviso: Não foi possível determinar o próximo número sequencial a partir dos nomes de arquivos existentes. Iniciando do 1.")
-                 step_counter = 1 # Reset on error
+        print(f"\nAguardando arquivo '{template_manual_path}' ser criado/atualizado...")
+
+        # Esperar pelo arquivo template ser criado/atualizado
+        wait_time = 0
+        last_modified_time = None
+        if os.path.exists(template_manual_path):
+             last_modified_time = os.path.getmtime(template_manual_path)
+             print(f"Arquivo '{template_manual_path}' já existe. Aguardando modificação...")
         else:
-             print("Nenhum arquivo de template sequencial encontrado na pasta. Iniciando a sequência do 1.")
-             step_counter = 1 # Start from 1 if no template files found
+             print(f"Aguardando criação do arquivo '{template_manual_path}'...")
 
 
-    screenshot_temp_path = "screenshot_temp_for_template_manual.png" # Nome fixo para a screenshot temporária
-    template_manual_path = os.path.join(action_folder, "template.png") # Caminho fixo para o template manual
+        while True:
+             time.sleep(1) # Espera 1 segundo
+             wait_time += 1
+
+             if os.path.exists(template_manual_path):
+                  current_modified_time = os.path.getmtime(template_manual_path)
+                  # Check if file is new or has been modified since we last checked/started waiting
+                  if last_modified_time is None or current_modified_time > last_modified_time + 1: # Add a small buffer for saving process
+                       print(f"\nArquivo '{template_manual_path}' detectado/modificado após {wait_time}s de espera!")
+                       last_modified_time = current_modified_time # Update the last modified time
+                       break # Exit the waiting loop
+
+             if wait_time % 5 == 0: # Imprime uma mensagem a cada 5 segundos
+                 print(f"Ainda aguardando por '{template_manual_path}'... ({wait_time}s)")
+
+        # Remover a screenshot temporária APÓS o usuário criar o template
+        if os.path.exists(screenshot_temp_path):
+            os.remove(screenshot_temp_path)
+            print(f"Arquivo temporário '{screenshot_temp_path}' removido.")
+
+        # Retorna o caminho completo para o template criado manualmente
+        return template_manual_path
+
+    else:
+        print("Falha ao capturar a tela para criar o template.")
+        # Não há arquivo temporário para remover neste caso
+        return None
+
+
+# --- Função principal para gravar a sequência de ações (usando assistentes) ---
+def record_action_sequence_assisted(action_name, device_id=None):
+    """
+    Script principal para gravar uma sequência de ações, guiando o usuário
+    na criação de templates ou na gravação de coordenadas, e salvando
+    a configuração de cada passo em um arquivo sequence.json na pasta da ação.
+
+    Args:
+        action_name (str): O nome da ação (será usado para criar/acessar a pasta).
+        device_id (str, optional): O ID do dispositivo Android.
+    """
+    action_folder = os.path.join("acoes", action_name)
+    if not os.path.exists(action_folder):
+        os.makedirs(action_folder)
+        print(f"Pasta de ação '{action_folder}' criada/verificada.")
+
+    sequence_filepath = os.path.join(action_folder, "sequence.json")
+    action_sequence = [] # Inicializa a sequência vazia
+
+    # --- Carregar sequência existente se houver ---
+    if os.path.exists(sequence_filepath):
+        try:
+            with open(sequence_filepath, 'r', encoding='utf-8') as f:
+                loaded_sequence = json.load(f)
+                if isinstance(loaded_sequence, list):
+                     action_sequence = loaded_sequence
+                     print(f"Sequência existente carregada de: {sequence_filepath}")
+                     print(f"Passos atuais na sequência: {len(action_sequence)}")
+                else:
+                     print(f"Aviso: Conteúdo inválido no arquivo JSON de sequência '{sequence_filepath}'. Começando nova sequência.")
+                     action_sequence = [] # Começa nova sequência se o JSON for inválido
+        except json.JSONDecodeError:
+            print(f"Erro ao decodificar o arquivo JSON '{sequence_filepath}'. Verifique a sintaxe. Começando nova sequência.")
+            action_sequence = [] # Começa nova sequência em caso de erro de JSON
+        except Exception as e:
+            print(f"Erro ao carregar arquivo JSON de sequência '{sequence_filepath}': {e}. Começando nova sequência.")
+            action_sequence = [] # Começa nova sequência em caso de outros erros
+    else:
+        print(f"Arquivo de sequência '{sequence_filepath}' não encontrado. Começando nova sequência.")
+
+
+    print(f"\n--- Modo de Gravação da Sequência de Ações para: {action_name} ---")
+    print("Você adicionará passos um por um.")
+    print("Digite 'q' a qualquer momento para sair e salvar a sequência atual.")
+
 
     while True:
-        user_input = input(f"Pronto para o template (Passo {step_counter})? Pressione Enter para capturar tela ou 'q' para sair: ")
+        current_step_number = len(action_sequence) + 1
+        print(f"\n--- Passo {current_step_number} ---")
+        print("Escolha o tipo de passo a gravar:")
+        print("  t: Template de Imagem (Usar assistente de recorte manual)")
+        print("  c: Coordenadas Diretas (Capturar toque na tela)")
+        print("  w: Espera (gravar um tempo fixo)")
+        print("  q: Sair e Salvar")
 
-        if user_input.lower() == 'q':
-            print("Saindo do modo de criação de templates manuais.")
-            # Clean up temp screenshot if it exists on exit
-            if os.path.exists(screenshot_temp_path):
-                os.remove(screenshot_temp_path)
-                print(f"Arquivo temporário {screenshot_temp_path} removido na saída.")
-            # Also clean up the template.png if it exists and the user quits
-            if os.path.exists(template_manual_path):
-                 print(f"Removendo arquivo temporário de template '{template_manual_path}'.")
-                 os.remove(template_manual_path)
+        step_type_choice = input("Digite a opção (t, c, w, q): ").lower()
 
-            break
-        elif user_input == '':
-            print("\nCapturando tela...")
-            # Use the capture_screen function from adb_utils
-            if capture_screen(device_id=device_id, output_path=screenshot_temp_path):
-                print(f"Screenshot capturada e salva como {screenshot_temp_path}.")
+        if step_type_choice == 'q':
+            print("\nSaindo do modo de gravação.")
+            break # Sai do loop principal
 
-                # --- Instruir o usuário e esperar pelo template manual ---
-                print(f"\n--> INSTRUÇÕES <--")
-                print(f"1. Abra o arquivo '{screenshot_temp_path}' em um editor de imagem.")
-                print(f"2. Recorte a área exata que você quer usar como template.")
-                print(f"3. Salve o recorte como '{os.path.basename(template_manual_path)}' DENTRO da pasta da ação: '{action_folder}'")
-                print(f"4. Volte aqui e aguarde. O script detectará o arquivo.")
-                print(f"------------------")
+        elif step_type_choice == 't':
+            print("\n--> Gravando Passo de Template de Imagem <--")
+            # Chama o assistente para criar o arquivo de template manualmente
+            template_file_path = create_action_template_manual_crop(action_name, current_step_number, device_id=device_id)
 
-
-                print(f"\nAguardando arquivo '{template_manual_path}' ser criado/atualizado...")
-
-                # Esperar pelo arquivo template.png ser criado/atualizado
-                wait_time = 0
-                # Use a mechanism to check for file modification or creation
-                last_modified_time = None
-                if os.path.exists(template_manual_path):
-                     last_modified_time = os.path.getmtime(template_manual_path)
-                     print(f"Arquivo '{template_manual_path}' já existe. Aguardando modificação...")
-                else:
-                     print(f"Aguardando criação do arquivo '{template_manual_path}'...")
-
-
-                while True:
-                     time.sleep(1) # Espera 1 segundo
-                     wait_time += 1
-
-                     if os.path.exists(template_manual_path):
-                          current_modified_time = os.path.getmtime(template_manual_path)
-                          # Check if file is new or has been modified since we last checked/started waiting
-                          if last_modified_time is None or current_modified_time > last_modified_time + 1: # Add a small buffer for saving process
-                               print(f"\nArquivo '{template_manual_path}' detectado/modificado após {wait_time}s de espera!")
-                               last_modified_time = current_modified_time # Update the last modified time
-                               break # Exit the waiting loop
-
-                     if wait_time % 5 == 0: # Imprime uma mensagem a cada 5 segundos
-                         print(f"Ainda aguardando por '{template_manual_path}'... ({wait_time}s)")
-
-                     # Add an option to cancel waiting? Ctrl+C still works.
+            if template_file_path:
+                 # Se o template foi criado com sucesso, adiciona um modelo de passo ao JSON
+                 template_filename = os.path.basename(template_file_path)
+                 step_config = {
+                     "name": f"Passo {current_step_number}: Template {template_filename}", # Nome padrão
+                     "type": "template",
+                     "template_file": template_filename,
+                     "action_on_found": "click", # Ação padrão ao encontrar
+                     "click_delay": 0.5, # Delay padrão
+                     # Adicionando defaults para action_before_find e action_after_find
+                     "action_before_find": {
+                         "type": "scroll",
+                         "direction": "up",
+                         "duration_ms": 500,
+                         "delay_after_scroll": 0.5
+                     },
+                     "action_after_find": {
+                         "type": "scroll",
+                         "direction": "down",
+                         "duration_ms": 500,
+                         "delay_after_scroll": 0.5
+                     },
+                     "max_attempts": 1 # Placeholder
+                 }
+                 action_sequence.append(step_config)
+                 print(f"Passo de Template '{template_filename}' adicionado à sequência (modelo com defaults).")
+                 print("Lembre-se de editar o arquivo sequence.json para ajustar este passo (remover scroll, mudar delay, etc.).")
+            else:
+                 print("Falha ao criar o template. Passo de template NÃO adicionado à sequência.")
 
 
-                # --- Arquivo template.png detectado/modificado, agora testar ---
-                print(f"\nTestando o template: {template_manual_path}")
-                # capture_screen, find_image_on_screen, simulate_touch are used inside find_and_confirm_click
-                # We pass the path to the manually created template.png
-                # Modified find_and_confirm_click to return success and coordinates
-                success, coords = find_and_confirm_click(template_manual_path, device_id=device_id)
+        elif step_type_choice == 'c':
+            print("\n--> Gravando Passo de Coordenadas Diretas <--")
+            print("Aguardando toque na tela do dispositivo...")
+            touch_coords_raw = get_touch_event_coordinates(device_id=device_id) # Usando a função de adb_utils
 
-                # Remover a screenshot temporária APÓS o teste (sucesso ou falha)
-                if os.path.exists(screenshot_temp_path):
-                    os.remove(screenshot_temp_path)
-                    print(f"Arquivo temporário {screenshot_temp_path} removido após teste.")
+            if touch_coords_raw:
+                center_x_raw, center_y_raw = touch_coords_raw
+                print(f"Toque RAW capturado em: ({center_x_raw}, {center_y_raw})")
 
+                # --- Coordinate Scaling/Adjustment ---
+                # Usando as variáveis definidas localmente ou importadas
+                try:
+                     scale_x = DEVICE_SCREEN_WIDTH / GETEVENT_MAX_X if GETEVENT_MAX_X > 0 else 1
+                     scale_y = DEVICE_SCREEN_HEIGHT / GETEVENT_MAX_Y if GETEVENT_MAX_Y > 0 else 1
+                except NameError:
+                     print("Erro: Variáveis de configuração do dispositivo (DEVICE_SCREEN_WIDTH, etc.) não encontradas. Defina-as.")
+                     continue # Pula para o próximo loop
 
-                if success:
-                    print("Teste de template BEM-SUCEDIDO: A imagem foi encontrada e clicada.")
-                    center_x, center_y = coords # Desempacota as coordenadas retornadas
+                # Aplicar o fator de escala
+                adjusted_x = int(center_x_raw * scale_x)
+                adjusted_y = int(center_y_raw * scale_y)
 
-                    # --- Se o teste passar, COPIAR template e SALVAR coordenadas ---
-                    template_filename_sequential = f"{step_counter:02d}_template.png"
-                    template_save_path = os.path.join(action_folder, template_filename_sequential)
-
-                    try:
-                        # Use shutil.copy2 to copy metadata as well
-                        shutil.copy2(template_manual_path, template_save_path)
-                        print(f"Cópia do template salva como: {template_save_path}")
-
-                        # --- Salvar as coordenadas do centro da imagem encontrada no JSON ---
-                        # Carregar a sequência existente, adicionar a nova coordenada e salvar
-                        action_coords_sequence = []
-                        if os.path.exists(sequence_filepath):
-                            try:
-                                with open(sequence_filepath, 'r') as f:
-                                    action_coords_sequence = json.load(f)
-                            except json.JSONDecodeError:
-                                print(f"Aviso: Arquivo JSON de sequência '{sequence_filepath}' inválido/vazio. Criando nova sequência.")
-                                action_coords_sequence = [] # Reinicia se o JSON for inválido/vazio
-                            except Exception as e:
-                                print(f"Erro ao carregar arquivo JSON de sequência '{sequence_filepath}': {e}. Criando nova sequência.")
-                                action_coords_sequence = [] # Reinicia em caso de outros erros
-
-                        # Adicionar as coordenadas encontradas como uma tupla (X, Y)
-                        action_coords_sequence.append((center_x, center_y))
-                        print(f"Coordenadas encontradas ({center_x}, {center_y}) adicionadas à sequência.")
-
-                        # Salvar a sequência atualizada no arquivo JSON
-                        try:
-                            with open(sequence_filepath, 'w') as f:
-                                json.dump(action_coords_sequence, f, indent=4) # Usar indent=4 para facilitar a leitura
-                            print(f"Sequência de coordenadas atualizada salva em: {sequence_filepath}")
-                        except Exception as e:
-                            print(f"Erro ao salvar a sequência de coordenadas em {sequence_filepath}: {e}")
-
-
-                        step_counter += 1 # Incrementar APENAS se o teste passar e a cópia for bem-sucedida (e salvamento JSON tentado)
-
-
-                    except OSError as e:
-                        print(f"Erro ao copiar o arquivo {template_manual_path} para {template_save_path}: {e}")
-                        print("A cópia do template não foi salva corretamente. O passo não será incrementado.")
-                        # step_counter is not incremented on copy error.
-
-                    except Exception as e:
-                         print(f"Ocorreu um erro inesperado após teste bem-sucedido ao tentar copiar o template ou salvar JSON: {e}")
-                         # step_counter is not incremented on unexpected error.
-
-
-                else:
-                    print("Teste de template FALHOU: A imagem NÃO foi encontrada ou clicada.")
-                    print(f"O arquivo '{template_manual_path}' permaneceu na pasta. Recorte e salve-o novamente para o Passo {step_counter}.")
-                    # Não incrementa step_counter
-                    # O loop continuará e esperará por uma nova modificação em template.png
-
-
-                # The loop continues, either for the next step (if successful) or the same step (if failed)
-
+                # Adicionar o passo de coordenadas diretas à sequência
+                step_config = {
+                    "name": f"Passo {current_step_number}: Clique em Coords", # Nome padrão
+                    "type": "coords",
+                    "coordinates": [adjusted_x, adjusted_y],
+                    "click_delay": 0.5 # Delay padrão
+                }
+                action_sequence.append(step_config)
+                print(f"Passo de Coordenadas Diretas ({adjusted_x}, {adjusted_y}) adicionado à sequência.")
 
             else:
-                print("Falha ao capturar a tela. Não foi possível iniciar o processo de criação de template manual.")
-                # Não há arquivo temporário para remover neste caso
+                 print("Não foi possível capturar coordenadas de toque válidas. Passo de coordenadas NÃO adicionado.")
+
+
+        elif step_type_choice == 'w':
+            print("\n--> Gravando Passo de Espera <--")
+            # --- Lógica para gravar passo de espera ---
+            step_config = {
+                "name": f"Passo {current_step_number}: Espera", # Nome temporário
+                "type": "wait"
+            }
+
+            try:
+                wait_duration = float(input("Digite a duração da espera em segundos (ex: 2.5): "))
+                if wait_duration > 0:
+                    step_config["duration_seconds"] = wait_duration
+                    # --- Adicionar o passo configurado à sequência ---
+                    action_sequence.append(step_config)
+                    print(f"\nPasso de Espera de {wait_duration} segundos adicionado à sequência.")
+                else:
+                    print("Duração da espera deve ser maior que zero. Passo não adicionado.")
+            except ValueError:
+                print("Entrada inválida para a duração da espera. Passo não adicionado.")
+            except Exception as e:
+                 print(f"Ocorreu um erro ao processar a espera: {e}")
+                 print("Este passo de espera NÃO será adicionado à sequência.")
+
 
         else:
-            print("Entrada inválida. Pressione Enter ou 'q'.")
+            print("Opção inválida. Digite 't', 'c', 'w' ou 'q'.")
+            continue # Volta para o início do loop para pedir a opção novamente
 
-# Exemplo de uso do script auxiliar de template manual:
-action_name_manual = "coleta_item" # Nome da ação para salvar os templates e a sequência
-device_id_manual = 'RXCTB03EXVK'  # Substitua pelo seu device_id
-create_action_template_manual_crop(action_name_manual, device_id=device_id_manual)
+        # --- Salvar a sequência após cada passo ---
+        # Salvar após cada passo é mais seguro caso algo dê errado ou o script seja interrompido.
+        try:
+            with open(sequence_filepath, 'w', encoding='utf-8') as f:
+                json.dump(action_sequence, f, indent=4) # Usar indent=4 para facilitar a leitura
+            print(f"\nSequência atual salva em: {sequence_filepath}")
+        except Exception as e:
+            print(f"Erro ao salvar a sequência em {sequence_filepath}: {e}")
+
+
+    # --- Fim do loop principal ---
+
+    print(f"\nGravação da sequência de ações para '{action_name}' finalizada.")
+    # A sequência final já foi salva na última iteração do loop.
+
+
+# Exemplo de uso do script de gravação:
+# Descomente as linhas abaixo para iniciar o modo de gravação.
+action_name_to_record = "sair_conta" # Substitua pelo nome da ação que você quer gravar/editar
+device_id_recording = 'RXCTB03EXVK'  # Substitua pelo seu device_id
+record_action_sequence_assisted(action_name_to_record, device_id=device_id_recording)
