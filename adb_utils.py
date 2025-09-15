@@ -1,6 +1,112 @@
+import cv2
 import subprocess
 import os
+import time
+import re
 
+# --- Função para capturar evento de toque ---
+def get_touch_event_coordinates(device_id=None):
+    """
+    Captura as coordenadas do próximo evento de toque na tela do dispositivo Android
+    usando adb shell getevent.
+
+    Args:
+        device_id (str, optional): O ID do dispositivo. Se None, usa o dispositivo padrão.
+
+    Returns:
+        tuple: Uma tupla (x, y) das coordenadas do toque, ou None em caso de erro.
+    """
+    command = ["adb"]
+    if device_id:
+        command.extend(["-s", device_id])
+    # Use getevent -l no device específico identificado na saída do usuário
+    # Aumentei o timeout para dar mais tempo para o toque.
+    # Removi o grep inicial para ver toda a saída do getevent para depuração.
+    # Direcionando para /dev/input/event5 com base na saída do usuário
+    command.extend(["shell", "timeout 30 getevent -l /dev/input/event5"])
+
+    print("Aguardando toque na tela do dispositivo. Toque na tela e observe a saída abaixo.")
+
+    try:
+        # Use Popen para ler a saída em tempo real
+        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1)
+        x, y = None, None
+        captured_x, captured_y = None, None # Store the last captured X and Y
+
+        # Read output line by line for a longer duration or until desired events are found
+        start_time = time.time()
+        # Read all lines within the timeout period
+        while time.time() - start_time < 30: # Match the timeout from the adb command
+             line = process.stdout.readline()
+             if not line:
+                  if process.poll() is not None: # Process finished
+                       break
+                  continue # Read again if line is empty but process is running
+
+             print(f"RAW getevent: {line.strip()}") # Print all raw output for debugging
+
+             # Try to parse X and Y
+             match_x = re.search(r'ABS_MT_POSITION_X\s+([0-9a-fA-F]+)', line)
+             match_y = re.search(r'ABS_MT_POSITION_Y\s+([0-9a-fA-F]+)', line)
+             match_sync = re.search(r'EV_SYN\s+SYN_REPORT', line)
+             match_track_end = re.search(r'ABS_MT_TRACKING_ID\s+ffffffff', line)
+
+
+             if match_x:
+                 captured_x = int(match_x.group(1), 16)
+                 print(f"DEBUG Parsed X (temp): {captured_x}")
+             if match_y:
+                 captured_y = int(match_y.group(1), 16)
+                 print(f"DEBUG Parsed Y (temp): {captured_y}")
+
+             # If we have captured both X and Y and see a sync report or tracking ID end,
+             # this indicates the end of a touch event. Return the last captured coords.
+             if captured_x is not None and captured_y is not None and (match_sync or match_track_end):
+                 print(f"\nToque capturado (após análise da saída bruta) em: ({captured_x}, {captured_y})")
+                 # Try to terminate the process cleanly
+                 try:
+                     process.terminate()
+                 except Exception as term_e:
+                     print(f"Erro ao tentar encerrar o processo getevent: {term_e}")
+                 return (captured_x, captured_y)
+
+        # If timeout occurs and no valid touch event sequence was captured
+        print("\n--- Fim do tempo limite getevent ---")
+        print("Saída bruta capturada:")
+        # Print raw output collected during the timeout if no touch was fully detected
+        if not captured_x or not captured_y: # Only print if no full touch sequence was processed and returned early
+            # Limit printing of raw output to avoid flooding if it's very long
+            for i, line in enumerate(raw_output):
+                if i < 100: # Print up to 100 lines
+                    print(line)
+                elif i == 100:
+                    print("...(output truncated)...")
+                    break
+            print("--- Fim da saída bruta ---")
+
+        print("Não foi possível capturar coordenadas de toque válidas após a análise da saída.")
+        # Ensure the process is terminated if we exit the loop due to timeout or parsing failure
+        try:
+            process.terminate()
+        except Exception as term_e:
+            print(f"Erro ao tentar encerrar o processo getevent após timeout ou falha de análise: {term_e}")
+
+        return None
+
+    except FileNotFoundError:
+        print("Erro: adb not found. Make sure Android SDK is installed and in your PATH.")
+        return None
+    except Exception as e:
+        print(f"An error occurred while capturing touch event: {e}")
+        # Ensure the process is terminated if an exception occurs
+        try:
+            process.terminate()
+        except Exception as term_e:
+            print(f"Erro ao tentar encerrar o processo getevent após erro: {term_e}")
+
+        return None
+
+# --- Função para capturar a tela do dispositivo Android usando adb (Local) ---
 def capture_screen(device_id=None, output_path="screenshot.png"):
     """
     Captura a tela do dispositivo Android usando adb.
@@ -8,30 +114,64 @@ def capture_screen(device_id=None, output_path="screenshot.png"):
     Args:
         device_id (str, optional): O ID do dispositivo. Se None, usa o dispositivo padrão.
         output_path (str, optional): O caminho para salvar a screenshot.
+
+    Returns:
+        bool: True se a captura for bem sucedida, False caso contrário.
     """
-    command = ["adb"]
+    # Temporarily save screenshot to device's /sdcard
+    device_screenshot_path = "/sdcard/screenshot_temp.png" # Use a unique temp name on device
+
+    command_screencap = ["adb"]
     if device_id:
-        command.extend(["-s", device_id])
-    command.extend(["exec-out", "screencap -p > /sdcard/screenshot.png"])
+        command_screencap.extend(["-s", device_id])
+    command_screencap.extend(["shell", "screencap -p", device_screenshot_path]) # Save to a file on device
+
+    command_pull = ["adb"]
+    if device_id:
+        command_pull.extend(["-s", device_id])
+    command_pull.extend(["pull", device_screenshot_path, output_path]) # Pull from device to PC
+
+    command_rm = ["adb"]
+    if device_id:
+        command_rm.extend(["-s", device_id])
+    command_rm.extend(["shell", "rm", device_screenshot_path]) # Clean up device temp file
+
 
     try:
-        subprocess.run(command, check=True)
-        print(f"Screenshot capturada e salva em /sdcard/screenshot.png no dispositivo.")
+        # Capture to device
+        print("Capturando tela no dispositivo...")
+        result_screencap = subprocess.run(command_screencap, check=True, capture_output=True, text=True)
+        # print(f"screencap stdout: {result_screencap.stdout}")
+        # print(f"screencap stderr: {result_screencap.stderr}")
+        print(f"Screenshot capturada e salva em {device_screenshot_path} no dispositivo.")
 
-        # Pull the screenshot from the device to the local machine
-        pull_command = ["adb"]
-        if device_id:
-            pull_command.extend(["-s", device_id])
-        pull_command.extend(["pull", "/sdcard/screenshot.png", output_path])
-
-        subprocess.run(pull_command, check=True)
+        # Pull to PC
+        print(f"Copiando screenshot para {output_path} no PC...")
+        result_pull = subprocess.run(command_pull, check=True, capture_output=True, text=True)
+        # print(f"pull stdout: {result_pull.stdout}")
+        # print(f"pull stderr: {result_pull.stderr}")
         print(f"Screenshot copiada para {output_path} no PC.")
+
+        # Clean up device temp file
+        print(f"Removendo arquivo temporário {device_screenshot_path} do dispositivo...")
+        result_rm = subprocess.run(command_rm, check=True, capture_output=True, text=True)
+        # print(f"rm stdout: {result_rm.stdout}")
+        # print(f"rm stderr: {result_rm.stderr}")
+        print("Arquivo temporário removido do dispositivo.")
+
+
+        return True
 
     except subprocess.CalledProcessError as e:
         print(f"Erro ao capturar a tela: {e}")
+        print(f"Stderr: {e.stderr}")
+        return False
     except FileNotFoundError:
         print("Erro: adb não encontrado. Certifique-se de que o Android SDK está instalado e no PATH.")
-
+        return False
+    except Exception as e:
+        print(f"Ocorreu um erro durante a captura de tela: {e}")
+        return False
 # Exemplo de uso:
 # capture_screen(device_id='RXCTB03EXVK', output_path='screenshot.png')
 # capture_screen(output_path='screenshot.png') # Usando o dispositivo padrão
