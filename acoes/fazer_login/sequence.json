@@ -11,6 +11,12 @@
         "type": "template",
         "template_file": "template_step_02.png",
         "action_on_found": "click",
+        "action_before_find": { 
+            "type": "scroll",
+            "direction": "up",
+            "duration_ms": 5000,
+            "delay_after_scroll": 1.5
+        },
         "click_delay": 1.5
     }
 ]
