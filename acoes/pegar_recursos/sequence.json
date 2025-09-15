@@ -1,0 +1,58 @@
+[
+    {
+        "name": "Passo 1: Template template_step_01.png",
+        "type": "template",
+        "template_file": "template_step_01.png",
+        "action_on_found": "click",
+        "action_after_find": { 
+            "type": "scroll",
+            "direction": "up",
+            "duration_ms": 900,
+            "delay_after_scroll": 1.5
+        },
+        "click_delay": 0.5,
+        "max_attempts": 5,
+        "attempt_delay": 1.0,
+        "initial_delay": 2.0
+    },
+    {
+        "name": "Passo 2: Template template_step_02.png",
+        "type": "template",
+        "template_file": "template_step_02.png",
+        "action_on_found": "click",
+        "click_delay": 0.5,
+        "max_attempts": 5,
+        "attempt_delay": 1.0,
+        "initial_delay": 2.0
+    },
+    {
+        "name": "Passo 3: Template template_step_03.png",
+        "type": "template",
+        "template_file": "template_step_03.png",
+        "action_on_found": "click",
+        "click_delay": 0.5,
+        "max_attempts": 5,
+        "attempt_delay": 1.0,
+        "initial_delay": 2.0
+    },
+    {
+        "name": "Passo 4: Template template_step_04.png",
+        "type": "template",
+        "template_file": "template_step_04.png",
+        "action_on_found": "click",
+        "click_delay": 0.5,
+        "max_attempts": 5,
+        "attempt_delay": 1.0,
+        "initial_delay": 2.0
+    },
+    {
+        "name": "Passo 5: Template template_step_05.png",
+        "type": "template",
+        "template_file": "template_step_05.png",
+        "action_on_found": "click",
+        "click_delay": 0.5,
+        "max_attempts": 5,
+        "attempt_delay": 1.0,
+        "initial_delay": 2.0
+    }
+]

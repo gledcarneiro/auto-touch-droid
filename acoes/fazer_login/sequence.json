@@ -1,0 +1,16 @@
+[
+    {
+        "name": "Passo 1: Template template_step_01.png",
+        "type": "template",
+        "template_file": "template_step_01.png",
+        "action_on_found": "click",
+        "click_delay": 1.5
+    },
+    {
+        "name": "Passo 2: Template template_step_02.png",
+        "type": "template",
+        "template_file": "template_step_02.png",
+        "action_on_found": "click",
+        "click_delay": 1.5
+    }
+]
