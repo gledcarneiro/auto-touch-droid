@@ -1,6 +1,6 @@
 # Nome do Arquivo: 42427df3_create_action_template.py
 # Descrição: Contém funções auxiliares para criar templates de imagem manualmente e gravar sequências assistidas.
-# Versão: 01.00.04 -> Inclusão de valores default para action_before_find e action_after_find em passos template gravados.
+# Versão: 01.00.10 -> Incluindo action_before_find e action_after_find comentados no template JSON gerado.
 # Analista: Gemini
 # Programador: Gled Carneiro
 # -----------------------------------------------------------------------------
@@ -11,6 +11,7 @@ import time
 import re
 import shutil # Importar shutil para copiar arquivos
 import json # Importar json para lidar com arquivos de sequência
+import numpy as np # Importar numpy para operações com imagens
 
 # --- Funções auxiliares ---
 # Assumindo que adb_utils.py e action_executor.py estão acessíveis para importar
@@ -27,12 +28,85 @@ GETEVENT_MAX_Y = 4218 # Ajuste com base nos seus testes (maior Y observado no te
 # --- Fim das Configurações do Dispositivo ---
 
 
-# --- Função para criar template manualmente (recortando de screenshot) ---
-def create_action_template_manual_crop(action_name, step_number, device_id=None):
+# --- Função para encontrar a marcação preta na imagem ---
+def find_black_mark(original_image_path, marked_image_path):
     """
-    Captura a tela do dispositivo, salva como screenshot_temp_<step_number>.png
-    e instrui o usuário a recortar a imagem do template manualmente, salvando-a
-    com um nome sequencial na pasta da ação.
+    Compara a imagem original com a imagem marcada e tenta encontrar a área da marcação preta.
+
+    Args:
+        original_image_path (str): Caminho para a imagem original (screenshot).
+        marked_image_path (str): Caminho para a imagem com a marcação preta.
+
+    Returns:
+        tuple: Uma tupla (x, y, w, h) representando o bounding box da marcação encontrada,
+               ou None se nenhuma marcação clara for detectada.
+    """
+    try:
+        original = cv2.imread(original_image_path)
+        marked = cv2.imread(marked_image_path)
+
+        if original is None:
+            print(f"Erro: Não foi possível carregar a imagem original de {original_image_path}")
+            return None
+        if marked is None:
+            print(f"Erro: Não foi possível carregar a imagem marcada de {marked_image_path}")
+            return None
+
+        # Garante que as imagens têm as mesmas dimensões
+        if original.shape != marked.shape:
+            print("Erro: As imagens original e marcada têm dimensões diferentes.")
+            return None
+
+        # Converta as imagens para tons de cinza
+        original_gray = cv2.cvtColor(original, cv2.COLOR_BGR2GRAY)
+        marked_gray = cv2.cvtColor(marked, cv2.COLOR_BGR2GRAY)
+
+        # Calcule a diferença absoluta entre as duas imagens em tons de cinza
+        # A diferença será maior onde a marcação preta foi adicionada
+        diff = cv2.absdiff(original_gray, marked_gray)
+
+        # Use um limiar para binarizar a imagem de diferença.
+        # Pixels com diferença acima do limiar são considerados parte da marcação.
+        # O valor 30 é um limiar inicial, pode precisar de ajuste.
+        _, thresh = cv2.threshold(diff, 30, 255, cv2.THRESH_BINARY)
+
+        # Encontre contornos na imagem binarizada.
+        # cv2.findContours pode ter diferentes retornos dependendo da versão do OpenCV
+        contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        # Itere sobre os contornos encontrados para encontrar o que provavelmente é a marcação
+        # Podemos procurar pelo maior contorno (assumindo que a marcação é a maior diferença)
+        # ou filtrar por área para evitar pequenos ruídos.
+        if contours:
+            # Encontre o contorno com a maior área
+            largest_contour = max(contours, key=cv2.contourArea)
+
+            # Obtenha o bounding box (caixa delimitadora) do maior contorno
+            x, y, w, h = cv2.boundingRect(largest_contour)
+
+            # Opcional: Filtrar por tamanho mínimo de área se necessário
+            min_mark_area = 50 # Exemplo: Mínimo de 50 pixels quadrados para ser considerado marcação
+            if cv2.contourArea(largest_contour) < min_mark_area:
+                 print("Aviso: Nenhuma marcação com área significativa encontrada.")
+                 return None
+
+            print(f"Marcação detectada no bounding box: ({x}, {y}, {w}, {h})")
+            return (x, y, w, h)
+        else:
+            print("Nenhum contorno detectado na imagem de diferença. Marcação não encontrada.")
+            return None
+
+    except Exception as e:
+        print(f"Ocorreu um erro ao encontrar a marcação preta: {e}")
+        return None
+
+
+# --- Função para criar template usando detecção de marcação ---
+def create_action_template_by_marking(action_name, step_number, device_id=None):
+    """
+    Captura a tela do dispositivo, instrui o usuário a marcar a área do template
+    com uma marcação preta na imagem salva, e então detecta a marcação
+    para recortar automaticamente o template da imagem original.
 
     Args:
         action_name (str): O nome da ação (será usado para criar/acessar a pasta).
@@ -47,60 +121,135 @@ def create_action_template_manual_crop(action_name, step_number, device_id=None)
         os.makedirs(action_folder)
         print(f"Pasta de ação '{action_folder}' criada/verificada.")
 
-    screenshot_temp_path = os.path.join(action_folder, f"screenshot_temp_{step_number:02d}.png") # Screenshot temporária na pasta da ação
-    template_manual_path = os.path.join(action_folder, f"template_step_{step_number:02d}.png") # Nome sugerido para o template manual
+    screenshot_original_path = os.path.join(action_folder, f"screenshot_original_{step_number:02d}.png") # Screenshot original
+    screenshot_marked_path = os.path.join(action_folder, f"screenshot_marked_{step_number:02d}.png") # Screenshot com marcação
+    template_generated_path = os.path.join(action_folder, f"template_step_{step_number:02d}.png") # Nome sugerido para o template gerado
 
-    print(f"\n--- Criando Template Manual para o Passo {step_number} da ação '{action_name}' ---")
+    print(f"\n--- Criando Template (por marcação) para o Passo {step_number} da ação '{action_name}' ---")
     print("Prepare a tela do seu dispositivo para o estado deste passo.")
     input("Pressione 'Enter' para capturar a tela para criar o template...")
 
-    if capture_screen(device_id=device_id, output_path=screenshot_temp_path):
-        print(f"\nScreenshot capturada e salva como '{screenshot_temp_path}'.")
-        print(f"\n--> INSTRUÇÕES <--")
-        print(f"1. Abra o arquivo '{screenshot_temp_path}' em um editor de imagem.")
-        print(f"2. Recorte a área exata que você quer usar como template para este passo.")
-        print(f"3. Salve o recorte como '{os.path.basename(template_manual_path)}' DENTRO da pasta da ação: '{action_folder}'")
-        print(f"4. Volte aqui e aguarde. O script detectará o arquivo.")
-        print(f"------------------")
+    # Captura a screenshot original
+    if not capture_screen(device_id=device_id, output_path=screenshot_original_path):
+        print("Falha ao capturar a tela para criar o template.")
+        return None
 
-        print(f"\nAguardando arquivo '{template_manual_path}' ser criado/atualizado...")
+    print(f"\nScreenshot original capturada e salva como '{screenshot_original_path}'.")
+    print(f"\n--> INSTRUÇÕES <--")
+    print(f"1. Abra o arquivo '{screenshot_original_path}' em um editor de imagem no seu PC.")
+    print(f"2. Adicione uma **marcação preta sólida** (bola, quadrado, etc.) em algum lugar DENTRO da área que você quer usar como template.")
+    print(f"3. Salve a imagem COM A MARCAÇÃO como '{os.path.basename(screenshot_marked_path)}' DENTRO da pasta da ação: '{action_folder}'")
+    print(f"4. Volte aqui e aguarde. O script detectará o arquivo marcado e tentará encontrar a marcação.")
+    print(f"------------------")
 
-        # Esperar pelo arquivo template ser criado/atualizado
-        wait_time = 0
-        last_modified_time = None
-        if os.path.exists(template_manual_path):
-             last_modified_time = os.path.getmtime(template_manual_path)
-             print(f"Arquivo '{template_manual_path}' já existe. Aguardando modificação...")
-        else:
-             print(f"Aguardando criação do arquivo '{template_manual_path}'...")
+    print(f"\nAguardando arquivo '{screenshot_marked_path}' ser criado/atualizado com a marcação...")
+
+    # Esperar pelo arquivo marcado ser criado/atualizado
+    wait_time = 0
+    last_modified_time_marked = None
+    if os.path.exists(screenshot_marked_path):
+         last_modified_time_marked = os.path.getmtime(screenshot_marked_path)
+         print(f"Arquivo '{screenshot_marked_path}' já existe. Aguardando modificação...")
+    else:
+         print(f"Aguardando criação do arquivo '{screenshot_marked_path}'...")
 
 
-        while True:
-             time.sleep(1) # Espera 1 segundo
-             wait_time += 1
+    while True:
+         time.sleep(1) # Espera 1 segundo
+         wait_time += 1
 
-             if os.path.exists(template_manual_path):
-                  current_modified_time = os.path.getmtime(template_manual_path)
-                  # Check if file is new or has been modified since we last checked/started waiting
-                  if last_modified_time is None or current_modified_time > last_modified_time + 1: # Add a small buffer for saving process
-                       print(f"\nArquivo '{template_manual_path}' detectado/modificado após {wait_time}s de espera!")
-                       last_modified_time = current_modified_time # Update the last modified time
-                       break # Exit the waiting loop
+         if os.path.exists(screenshot_marked_path):
+              current_modified_time_marked = os.path.getmtime(screenshot_marked_path)
+              # Check if file is new or has been modified since we last checked/started waiting
+              # Add a small buffer for saving process (e.g., 1 second)
+              if last_modified_time_marked is None or current_modified_time_marked > last_modified_time_marked + 1:
+                   print(f"\nArquivo '{screenshot_marked_path}' detectado/modificado após {wait_time}s de espera!")
+                   last_modified_time_marked = current_modified_time_marked # Update the last modified time
+                   break # Exit the waiting loop
 
-             if wait_time % 5 == 0: # Imprime uma mensagem a cada 5 segundos
-                 print(f"Ainda aguardando por '{template_manual_path}'... ({wait_time}s)")
+         if wait_time > 600: # Timeout de 10 minutos (600 segundos)
+              print("\nTempo limite de espera excedido. Nenhuma marcação foi salva.")
+              # Limpar arquivos temporários
+              try:
+                  if os.path.exists(screenshot_original_path): os.remove(screenshot_original_path)
+              except PermissionError:
+                  print(f"Aviso: Não foi possível remover o arquivo original '{screenshot_original_path}'. Ele pode estar em uso por outro programa. Por favor, feche-o.")
+              try:
+                  if os.path.exists(screenshot_marked_path): os.remove(screenshot_marked_path)
+              except PermissionError:
+                   print(f"Aviso: Não foi possível remover o arquivo marcado '{screenshot_marked_path}'. Ele pode estar em uso por outro programa. Por favor, feche-o.")
+              return None
 
-        # Remover a screenshot temporária APÓS o usuário criar o template
-        if os.path.exists(screenshot_temp_path):
-            os.remove(screenshot_temp_path)
-            print(f"Arquivo temporário '{screenshot_temp_path}' removido.")
 
-        # Retorna o caminho completo para o template criado manualmente
-        return template_manual_path
+         if wait_time % 15 == 0: # Imprime uma mensagem a cada 15 segundos
+             print(f"Ainda aguardando por '{screenshot_marked_path}'... ({wait_time}s)")
+
+
+    # --- Tentar encontrar a marcação preta na imagem marcada ---
+    print(f"\nProcurando a marcação preta em '{screenshot_marked_path}'...")
+    mark_position = find_black_mark(screenshot_original_path, screenshot_marked_path)
+
+    # --- Recortar a área do template da imagem original (sem a marcação) usando o bounding box da marcação ---
+
+    # Carregar a imagem original para o recorte
+    original_for_crop = cv2.imread(screenshot_original_path)
+    if original_for_crop is None:
+         print(f"Erro: Não foi possível recarregar a imagem original para recorte em {screenshot_original_path}")
+         # Limpar o arquivo marcado temporário
+         try:
+             if os.path.exists(screenshot_marked_path): os.remove(screenshot_marked_path)
+         except PermissionError:
+              print(f"Aviso: Não foi possível remover o arquivo marcado '{screenshot_marked_path}'. Ele pode estar em uso por outro programa. Por favor, feche-o.")
+         # Não remover a original aqui, pois o erro já indica que não foi carregada, a remoção será feita após o if
+         return None
+
+
+    if mark_position:
+        mark_x, mark_y, mark_w, mark_h = mark_position
+
+        # As coordenadas do bounding box (x, y, w, h) são exatamente a área de recorte
+        crop_x1 = mark_x
+        crop_y1 = mark_y
+        crop_x2 = mark_x + mark_w
+        crop_y2 = mark_y + mark_h
+
+        # Realizar o recorte da imagem original (sem a marcação) usando as coordenadas do bounding box
+        template_image = original_for_crop[crop_y1:crop_y2, crop_x1:crop_x2]
+
+        # Salvar o template recortado
+        cv2.imwrite(template_generated_path, template_image)
+        print(f"Template gerado e salvo como '{template_generated_path}'.")
+
+        # --- Limpar arquivos temporários APÓS o template ser salvo ---
+        try:
+            if os.path.exists(screenshot_original_path):
+                os.remove(screenshot_original_path)
+                print(f"Arquivo temporário '{screenshot_original_path}' removido.")
+        except PermissionError:
+            print(f"Aviso: Não foi possível remover o arquivo original '{screenshot_original_path}'. Ele pode estar em uso por outro programa. Por favor, feche-o.")
+
+        try:
+            if os.path.exists(screenshot_marked_path):
+                os.remove(screenshot_marked_path)
+                print(f"Arquivo temporário '{screenshot_marked_path}' removido.")
+        except PermissionError:
+            print(f"Aviso: Não foi possível remover o arquivo marcado '{screenshot_marked_path}'. Ele pode estar em uso por outro programa. Por favor, feche-o.")
+
+
+        # Retorna o caminho completo para o template criado
+        return template_generated_path
 
     else:
-        print("Falha ao capturar a tela para criar o template.")
-        # Não há arquivo temporário para remover neste caso
+        print("Não foi possível detectar a marcação preta. Falha na criação do template.")
+        # Limpar arquivos temporários em caso de falha na detecção da marcação
+        try:
+            if os.path.exists(screenshot_original_path): os.remove(screenshot_original_path) # Remover agora
+        except PermissionError:
+             print(f"Aviso: Não foi possível remover o arquivo original '{screenshot_original_path}'. Ele pode estar em uso por outro programa. Por favor, feche-o.")
+        try:
+            if os.path.exists(screenshot_marked_path): os.remove(screenshot_marked_path)
+        except PermissionError:
+             print(f"Aviso: Não foi possível remover o arquivo marcado '{screenshot_marked_path}'. Ele pode estar em uso por outro programa. Por favor, feche-o.")
         return None
 
 
@@ -154,7 +303,7 @@ def record_action_sequence_assisted(action_name, device_id=None):
         current_step_number = len(action_sequence) + 1
         print(f"\n--- Passo {current_step_number} ---")
         print("Escolha o tipo de passo a gravar:")
-        print("  t: Template de Imagem (Usar assistente de recorte manual)")
+        print("  t: Template de Imagem (Usar assistente de marcação na screenshot)")
         print("  c: Coordenadas Diretas (Capturar toque na tela)")
         print("  w: Espera (gravar um tempo fixo)")
         print("  q: Sair e Salvar")
@@ -166,9 +315,9 @@ def record_action_sequence_assisted(action_name, device_id=None):
             break # Sai do loop principal
 
         elif step_type_choice == 't':
-            print("\n--> Gravando Passo de Template de Imagem <--")
-            # Chama o assistente para criar o arquivo de template manualmente
-            template_file_path = create_action_template_manual_crop(action_name, current_step_number, device_id=device_id)
+            print("\n--> Gravando Passo de Template de Imagem (por marcação) <--")
+            # Chama o assistente para criar o arquivo de template usando detecção de marcação
+            template_file_path = create_action_template_by_marking(action_name, current_step_number, device_id=device_id)
 
             if template_file_path:
                  # Se o template foi criado com sucesso, adiciona um modelo de passo ao JSON
@@ -179,24 +328,26 @@ def record_action_sequence_assisted(action_name, device_id=None):
                      "template_file": template_filename,
                      "action_on_found": "click", # Ação padrão ao encontrar
                      "click_delay": 0.5, # Delay padrão
-                     # Adicionando defaults para action_before_find e action_after_find
-                     "action_before_find": {
-                         "type": "scroll",
-                         "direction": "up",
-                         "duration_ms": 500,
-                         "delay_after_scroll": 0.5
-                     },
-                     "action_after_find": {
-                         "type": "scroll",
-                         "direction": "down",
-                         "duration_ms": 500,
-                         "delay_after_scroll": 0.5
-                     },
-                     "max_attempts": 1 # Placeholder
+                     # Adicionando defaults para action_before_find e action_after_find como comentários
+                     # "#action_before_find": { # Exemplo de scroll antes de encontrar o template
+                     # # "type": "scroll",
+                     # # "direction": "up",
+                     # # "duration_ms": 500,
+                     # # "delay_after_scroll": 0.5
+                     # },
+                     # "#action_after_find": { # Exemplo de scroll após encontrar o template
+                     # # "type": "scroll",
+                     # # "direction": "down",
+                     # # "duration_ms": 500,
+                     # # "delay_after_scroll": 0.5
+                     # },
+                     "max_attempts": 5, # Aumentado o default para 5 tentativas
+                     "attempt_delay": 1.0, # Mantido o delay entre tentativas
+                     "initial_delay": 2.0 # Adicionado um atraso inicial padrão de 2 segundos
                  }
                  action_sequence.append(step_config)
                  print(f"Passo de Template '{template_filename}' adicionado à sequência (modelo com defaults).")
-                 print("Lembre-se de editar o arquivo sequence.json para ajustar este passo (remover scroll, mudar delay, etc.).")
+                 print("Lembre-se de editar o arquivo sequence.json para ajustar este passo (mudar delays, adicionar scroll, etc.).")
             else:
                  print("Falha ao criar o template. Passo de template NÃO adicionado à sequência.")
 
@@ -268,6 +419,9 @@ def record_action_sequence_assisted(action_name, device_id=None):
         # --- Salvar a sequência após cada passo ---
         # Salvar após cada passo é mais seguro caso algo dê errado ou o script seja interrompido.
         try:
+            # JSON não suporta comentários nativamente no formato.
+            # Uma alternativa é usar chaves que começam com um prefixo de comentário, como '#'.
+            # Ao carregar o JSON para execução, a função execultar_acoes precisará ignorar ou tratar essas chaves.
             with open(sequence_filepath, 'w', encoding='utf-8') as f:
                 json.dump(action_sequence, f, indent=4) # Usar indent=4 para facilitar a leitura
             print(f"\nSequência atual salva em: {sequence_filepath}")
@@ -283,6 +437,6 @@ def record_action_sequence_assisted(action_name, device_id=None):
 
 # Exemplo de uso do script de gravação:
 # Descomente as linhas abaixo para iniciar o modo de gravação.
-action_name_to_record = "sair_conta" # Substitua pelo nome da ação que você quer gravar/editar
-device_id_recording = 'RXCTB03EXVK'  # Substitua pelo seu device_id
-record_action_sequence_assisted(action_name_to_record, device_id=device_id_recording)
+# action_name_to_record = "minha_nova_acao" # Substitua pelo nome da ação que você quer gravar/editar
+# device_id_recording = 'RXCTB03EXVK'  # Substitua pelo seu device_id
+# record_action_sequence_assisted(action_name_to_record, device_id=device_id_recording)
