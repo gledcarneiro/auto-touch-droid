@@ -167,7 +167,7 @@ def create_action_template_by_marking(action_name, step_number, device_id=None):
                    last_modified_time_marked = current_modified_time_marked # Update the last modified time
                    break # Exit the waiting loop
 
-         if wait_time > 600: # Timeout de 10 minutos (600 segundos)
+         if wait_time > 1200: # Timeout em segundos (20 minutos)
               print("\nTempo limite de espera excedido. Nenhuma marcação foi salva.")
               # Limpar arquivos temporários
               try:
