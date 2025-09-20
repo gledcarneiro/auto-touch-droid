@@ -5,6 +5,7 @@
         "template_file": "template_step_01.png",
         "action_on_found": "click",
         "click_delay": 0.5,
+        "click_offset": [-100,0],
         "action_before_find": null,
         "action_after_find": null,
         "max_attempts": 5,

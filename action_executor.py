@@ -1,6 +1,6 @@
 # Nome do Arquivo: eee823d0_action_executor.py
 # Descrição: Contém a função principal para executar sequências de ações lidas de um arquivo sequence.json.
-# Versão: 01.00.05 -> Adicionado delay antes da primeira tentativa de encontrar o template.
+# Versão: 01.00.06 -> Adicionado tratamento para action_before_find e action_after_find. Adicionado initial_delay para templates. Adicionado click_offset. Melhorados logs.
 # Analista: Gemini
 # Programador: Gled Carneiro
 # -----------------------------------------------------------------------------
@@ -14,77 +14,73 @@ import subprocess # Importar subprocess explicitamente
 # Importe as funções necessárias
 from adb_utils import capture_screen, simulate_touch
 
-# Importando find_image_on_screen diretamente, pois find_and_confirm_click a utiliza
+# Importando find_image_on_screen diretamente, pois find_and_optionally_click a utiliza
 from image_detection import find_image_on_screen
 
 
-def simulate_scroll(device_id=None, direction="up", duration_ms=500):
+def simulate_scroll(device_id=None, direction="up", duration_ms=500, start_coords=None, end_coords=None):
     """
     Simula um gesto de scroll na tela do dispositivo Android usando adb shell input swipe.
-    Assume uma posição inicial/final central para o scroll. Pode precisar de refinamento.
 
     Args:
         device_id (str, optional): O ID do dispositivo Android. Se None, usa o dispositivo padrão.
-        direction (str, optional): A direção do scroll ('up' ou 'down'). Padrão é 'up'.
+        direction (str, optional): A direção do scroll ('up' ou 'down'). Padrão é 'up'. Ignorado se start_coords e end_coords forem fornecidos.
         duration_ms (int, optional): Duração do gesto de swipe em milissegundos.
+        start_coords (list, optional): Lista de 2 ints [x, y] para as coordenadas de início do swipe. Se fornecido, direction é ignorado.
+        end_coords (list, optional): Lista de 2 ints [x, y] para as coordenadas de fim do swipe. Se fornecido, direction é ignorado.
 
-    Note: As coordenadas de início/fim do swipe abaixo são exemplos.
-          Você pode precisar ajustá-las com base na resolução e orientação do seu dispositivo
-          para cobrir a área que você quer rolar. Estas são apenas para um scroll "genérico".
-          Para scrolls mais precisos, talvez precisemos de coordenadas fixas de início/fim.
-          Considerando o dispositivo DEITADO (Landscape).
+    Note: Se start_coords e end_coords não forem fornecidos, o scroll usará coordenadas genéricas centrais baseadas em Landscape (2400x1080).
+          AJUSTE estas coordenadas genéricas se a resolução do seu dispositivo for diferente.
     """
-    # Usando dimensões típicas para um dispositivo em Landscape (Ex: 1080p de altura na vertical vira 1080 de largura, e 2400 de largura vira 2400 de altura)
-    # AJUSTE estes valores para a resolução real do seu dispositivo em LANDSCAPE.
-    # Ex: 1080x2400 portrait -> 2400x1080 landscape
-    landscape_width = 2400  # Largura em modo paisagem
-    landscape_height = 1080 # Altura em modo paisagem
+    final_start_x, final_start_y = 0, 0
+    final_end_x, final_end_y = 0, 0
 
-    # Para scroll vertical em Landscape, o gesto é ao longo do eixo Y, no centro X.
-    center_x_landscape = landscape_width // 2
-
-    swipe_start_y = 0
-    swipe_end_y = 0
-
-    if direction == "up":
-        # Scroll para cima (conteúdo sobe): Gesto de baixo para cima na tela landscape.
-        # Do Y maior para o Y menor, no centro X.
-        swipe_start_y = int(landscape_height * 0.8) # Y maior (parte inferior da tela landscape)
-        swipe_end_y = int(landscape_height * 0.2)   # Y menor (parte superior da tela landscape)
-    elif direction == "down":
-        # Scroll para baixo (conteúdo desce): Gesto de cima para baixo na tela landscape.
-        # Do Y menor para o Y maior, no centro X.
-        swipe_start_y = int(landscape_height * 0.2) # Y menor (parte superior da tela landscape)
-        swipe_end_y = int(landscape_height * 0.8)   # Y maior (parte inferior da tela landscape)
+    if start_coords is not None and end_coords is not None and isinstance(start_coords, list) and len(start_coords) == 2 and isinstance(end_coords, list) and len(end_coords) == 2:
+        # Usar coordenadas fornecidas
+        final_start_x, final_start_y = start_coords
+        final_end_x, final_end_y = end_coords
+        print(f"Simulando scroll de coordenadas específicas: ({final_start_x}, {final_start_y}) para ({final_end_x}, {final_end_y})")
     else:
-        print(f"Aviso: Direção de scroll '{direction}' desconhecida. Usando 'up'.")
-        direction = "up"
-        swipe_start_y = int(landscape_height * 0.8)
-        swipe_end_y = int(landscape_height * 0.2)
+        # Usar coordenadas genéricas baseadas na direção (Landscape 2400x1080)
+        landscape_width = 2400  # Largura em modo paisagem
+        landscape_height = 1080 # Altura em modo paisagem
+        center_x_landscape = landscape_width // 2
 
+        if direction == "up":
+            # Scroll para cima (conteúdo sobe): Gesto de baixo para cima na tela landscape.
+            final_start_x, final_start_y = center_x_landscape, int(landscape_height * 0.8)
+            final_end_x, final_end_y = center_x_landscape, int(landscape_height * 0.2)
+            print(f"Simulando scroll genérico na direção 'up'.")
+        elif direction == "down":
+            # Scroll para baixo (conteúdo desce): Gesto de cima para baixo na tela landscape.
+            final_start_x, final_start_y = center_x_landscape, int(landscape_height * 0.2)
+            final_end_x, final_end_y = center_x_landscape, int(landscape_height * 0.8)
+            print(f"Simulando scroll genérico na direção 'down'.")
+        else:
+            print(f"Aviso: Direção de scroll '{direction}' desconhecida e coordenadas não fornecidas. Pulando scroll.")
+            return # Não executa o scroll se a configuração for inválida
 
     command = ["adb"]
     if device_id:
         command.extend(["-s", device_id])
     # input swipe <x1> <y1> <x2> <y2> [duration_ms]
-    # Passando as coordenadas na ordem correta: início X, início Y, fim X, fim Y
-    command.extend(["shell", "input", "swipe", str(center_x_landscape), str(swipe_start_y), str(center_x_landscape), str(swipe_end_y), str(duration_ms)])
+    command.extend(["shell", "input", "swipe", str(final_start_x), str(final_start_y), str(final_end_x), str(final_end_y), str(duration_ms)])
 
-    print(f"Simulando scroll na direção '{direction}' com duração de {duration_ms}ms...")
-    print(f"DEBUG simulate_scroll command: {' '.join(command)}") # Print the exact command
-
+    print(f"DEBUG simulate_scroll command: {' '.join(command)}")
 
     try:
-        result = subprocess.run(command, check=True, capture_output=True, text=True)
+        result = subprocess.run(command, check=True, capture_output=True, text=True, timeout=(duration_ms / 1000.0) + 5) # Timeout um pouco maior que a duração do swipe
         print("Scroll simulado com sucesso.")
-        print(f"DEBUG simulate_scroll stdout: {result.stdout.strip()}") # Print stdout
-        print(f"DEBUG simulate_scroll stderr: {result.stderr.strip()}") # Print stderr
+        # print(f"DEBUG simulate_scroll stdout: {result.stdout.strip()}") # Comentado para evitar muita verbosidade
+        # print(f"DEBUG simulate_scroll stderr: {result.stderr.strip()}") # Comentado para evitar muita verbosidade
 
         # Adicionar um pequeno delay após o scroll para a tela se estabilizar
         time.sleep(duration_ms / 1000.0 + 0.5) # Espera a duração do swipe + 0.5s
+    except subprocess.TimeoutExpired as e:
+         print(f"Erro de timeout ao simular o scroll: {e.cmd}")
     except subprocess.CalledProcessError as e:
         print(f"Erro ao simular o scroll: {e}")
-        print(f"Stderr: {e.stderr}")
+        print(f"Stderr: {e.stderr.strip()}")
     except FileNotFoundError:
         print("Erro: adb não encontrado. Certifique-se de que o Android SDK está instalado e no PATH.")
     except Exception as e:
@@ -92,15 +88,14 @@ def simulate_scroll(device_id=None, direction="up", duration_ms=500):
 
 
 # Função auxiliar para encontrar e, opcionalmente, clicar em um template com tentativas
-def find_and_optionally_click(template_path, device_id=None, screenshot_path="temp_screenshot_for_find.png", click_delay=0.5, max_attempts=1, attempt_delay=1, initial_delay=0):
+def find_and_optionally_click(template_path, device_id=None, screenshot_path="temp_screenshot_for_find.png", max_attempts=1, attempt_delay=1, initial_delay=0):
     """
-    Tenta encontrar um template em capturas de tela repetidas e, se encontrado, opcionalmente clica nele.
+    Tenta encontrar um template em capturas de tela repetidas.
 
     Args:
         template_path (str): O caminho para o arquivo do template de imagem a ser procurado.
         device_id (str, optional): O ID do dispositivo Android. Se None, usa o dispositivo padrão.
         screenshot_path (str, optional): Caminho temporário para salvar a screenshot.
-        click_delay (float, optional): Tempo de espera em segundos após o clique (se for clicado).
         max_attempts (int, optional): Número máximo de tentativas para encontrar o template.
         attempt_delay (float, optional): Tempo de espera em segundos entre as tentativas.
         initial_delay (float, optional): Tempo de espera em segundos antes da primeira tentativa.
@@ -109,15 +104,28 @@ def find_and_optionally_click(template_path, device_id=None, screenshot_path="te
         tuple: Retorna (True, (center_x, center_y)) se a imagem foi encontrada,
                (False, None) caso contrário. As coordenadas são None se não for encontrada.
     """
-    print(f"Procurando template: {template_path}")
+    print(f"Procurando template: {os.path.basename(template_path)}") # Printa só o nome do arquivo
 
     # Adicionar um atraso antes da primeira tentativa
     if initial_delay > 0:
         print(f"Aguardando {initial_delay} segundos antes da primeira tentativa...")
         time.sleep(initial_delay)
 
+    # Ensure the directory for the temp screenshot exists
+    temp_dir = os.path.dirname(screenshot_path)
+    if temp_dir and not os.path.exists(temp_dir):
+        try:
+            os.makedirs(temp_dir)
+            print(f"Diretório temporário criado: {temp_dir}")
+        except OSError as e:
+             print(f"Erro ao criar diretório temporário {temp_dir}: {e}. Usando o diretório atual para a screenshot temporária.")
+             screenshot_path = os.path.basename(screenshot_path) # Fallback to current directory
+
+
+    found_position = None # Initialize found_position outside the loop
+
     for attempt in range(1, max_attempts + 1):
-        print(f"Tentativa {attempt}/{max_attempts} para encontrar o template.")
+        print(f"Tentativa {attempt}/{max_attempts} para encontrar o template '{os.path.basename(template_path)}'.")
 
         # 1. Capturar a tela
         if not capture_screen(device_id=device_id, output_path=screenshot_path):
@@ -128,6 +136,9 @@ def find_and_optionally_click(template_path, device_id=None, screenshot_path="te
                     os.remove(screenshot_path)
                 except PermissionError:
                      print(f"Aviso: Não foi possível remover o arquivo temporário '{screenshot_path}' devido a erro de permissão.")
+                except Exception as e:
+                     print(f"Aviso: Erro ao remover arquivo temporário '{screenshot_path}': {e}")
+
             if attempt < max_attempts:
                  print(f"Aguardando {attempt_delay} segundos antes da próxima tentativa...")
                  time.sleep(attempt_delay)
@@ -142,9 +153,11 @@ def find_and_optionally_click(template_path, device_id=None, screenshot_path="te
         if os.path.exists(screenshot_path):
             try:
                 os.remove(screenshot_path)
-                print(f"Arquivo temporário {screenshot_path} removido.")
+                # print(f"Arquivo temporário {screenshot_path} removido.") # Comentado para evitar muita verbosidade
             except PermissionError:
                  print(f"Aviso: Não foi possível remover o arquivo temporário '{screenshot_path}' devido a erro de permissão.")
+            except Exception as e:
+                 print(f"Aviso: Erro ao remover arquivo temporário '{screenshot_path}': {e}")
 
 
         # 3. Se a imagem for encontrada, retornar as coordenadas
@@ -152,20 +165,24 @@ def find_and_optionally_click(template_path, device_id=None, screenshot_path="te
             x, y, w, h = image_position
             center_x = x + w // 2
             center_y = y + h // 2
-            print(f"Template encontrado na tentativa {attempt} em ({x}, {y}).")
-            return (True, (center_x, center_y)) # Retorna True e as coordenadas do centro
+            found_position = (True, (center_x, center_y))
+            print(f"Template '{os.path.basename(template_path)}' encontrado na tentativa {attempt} em ({x}, {y}).")
+            break # Sai do loop de tentativas se encontrar
 
         else:
-            print(f"Template não encontrado na tentativa {attempt}.")
+            # print(f"Template '{os.path.basename(template_path)}' não encontrado na tentativa {attempt}.") # Comentado para evitar muita verbosidade
             if attempt < max_attempts:
                  print(f"Aguardando {attempt_delay} segundos antes da próxima tentativa...")
                  time.sleep(attempt_delay)
-            # Continue o loop para a próxima tentativa
+            # Continue o loop para a próxima tentativa se não for a última
 
 
-    # Se o loop terminar sem encontrar o template
-    print(f"Template não encontrado após {max_attempts} tentativas.")
-    return (False, None) # Retorna False se o template não foi encontrado após todas as tentativas
+    # Se o loop terminar (encontrou ou excedeu tentativas)
+    if found_position:
+        return found_position
+    else:
+        print(f"Template '{os.path.basename(template_path)}' não encontrado após {max_attempts} tentativas.")
+        return (False, None) # Retorna False se o template não foi encontrado após todas as tentativas
 
 
 def execultar_acoes(action_name, device_id=None):
@@ -225,6 +242,7 @@ def execultar_acoes(action_name, device_id=None):
             template_filename = step_config.get("template_file")
             action_on_found = step_config.get("action_on_found", "click") # Default action is click
             click_delay = step_config.get("click_delay", 0.5) # Default delay
+            click_offset = step_config.get("click_offset", [0, 0]) # Obter o offset do JSON, default [0, 0]
             max_attempts = step_config.get("max_attempts", 1) # Default 1 attempt
             attempt_delay = step_config.get("attempt_delay", 1.0) # Default 1 second delay between attempts
             initial_delay = step_config.get("initial_delay", 0) # Novo campo para atraso inicial
@@ -243,18 +261,35 @@ def execultar_acoes(action_name, device_id=None):
                       scroll_direction = action_before.get("direction", "up")
                       scroll_duration = action_before.get("duration_ms", 500)
                       delay_after_scroll = action_before.get("delay_after_scroll", 0.5)
+                      scroll_start_coords = action_before.get("start_coords") # Pode ser None
+                      scroll_end_coords = action_before.get("end_coords") # Pode ser None
 
-                      print(f"Executando ação antes de encontrar template: Scroll na direção '{scroll_direction}'.")
-                      simulate_scroll(device_id=device_id, direction=scroll_direction, duration_ms=scroll_duration)
+                      print(f"Executando ação antes de encontrar template: Scroll.")
+                      simulate_scroll(
+                          device_id=device_id,
+                          direction=scroll_direction,
+                          duration_ms=scroll_duration,
+                          start_coords=scroll_start_coords, # Passa as coords específicas se existirem
+                          end_coords=scroll_end_coords
+                      )
                       time.sleep(delay_after_scroll) # Delay após o scroll
 
-                 # TODO: Adicionar outros tipos de actions_before_find here (ex: wait)
+                 elif before_type == "wait":
+                      wait_duration = action_before.get("duration_seconds")
+                      if isinstance(wait_duration, (int, float)) and wait_duration > 0:
+                          print(f"Executando ação antes de encontrar template: Esperando por {wait_duration} segundos.")
+                          time.sleep(wait_duration)
+                      else:
+                          print(f"Aviso: Configuração inválida para action_before_find wait em {step_name}.")
+
                  else:
-                      print(f"Aviso: Tipo de action_before_find '{before_type}' no {step_name} desconhecido/não implementado.")
+                      # Ignora chaves que começam com '#' (usadas para comentários no JSON)
+                      if not before_type or not before_type.startswith("#"):
+                           print(f"Aviso: Tipo de action_before_find '{before_type}' no {step_name} desconhecido/não implementado.")
 
 
-            # --- Tentar encontrar o template e executar a ação ---
-            # Usando a nova função find_and_optionally_click que inclui tentativas e atraso inicial
+            # --- Tentar encontrar o template ---
+            # Usando a função find_and_optionally_click que inclui tentativas e atraso inicial
             found, coords = find_and_optionally_click(
                 template_path,
                 device_id=device_id,
@@ -267,21 +302,36 @@ def execultar_acoes(action_name, device_id=None):
                 if action_on_found == "click":
                     # Se o template foi encontrado, simulamos o clique usando as coordenadas retornadas
                     center_x, center_y = coords
-                    print(f"Template encontrado. Simulando clique no centro ({center_x}, {center_y}).")
-                    simulate_touch(center_x, center_y, device_id=device_id)
+
+                    # Aplicar o click_offset, se for uma lista válida de 2 elementos
+                    if isinstance(click_offset, list) and len(click_offset) == 2:
+                         final_click_x = center_x + click_offset[0]
+                         final_click_y = center_y + click_offset[1]
+                         print(f"Aplicando offset [{click_offset[0]}, {click_offset[1]}]. Clicando em ({final_click_x}, {final_click_y}).")
+                         simulate_touch(final_click_x, final_click_y, device_id=device_id)
+                    else:
+                         # Validar se click_offset foi especificado mas não é uma lista de 2 ints
+                         if "click_offset" in step_config:
+                              print(f"Aviso: Configuração de click_offset inválida ({click_offset}) em {step_name}. Esperado [x, y].")
+                         print(f"Clicando no centro do template ({center_x}, {center_y}).")
+                         simulate_touch(center_x, center_y, device_id=device_id) # Clica no centro se o offset for inválido ou não especificado
+
                     if click_delay > 0:
                          time.sleep(click_delay)
-                    print(f"{step_name} ({template_filename}) concluído com sucesso.")
+                    print(f"{step_name} ({os.path.basename(template_path)}) concluído com sucesso (Template Encontrado, Clicado).")
                 # TODO: Adicionar outros tipos de action_on_found aqui (ex: swipe a partir do template)
                 else:
-                    print(f"Aviso: Tipo de action_on_found '{action_on_found}' no {step_name} desconhecido/não implementado. Template encontrado, mas ação não executada.")
+                    # Ignora chaves que começam com '#'
+                    if not action_on_found or not action_on_found.startswith("#"):
+                        print(f"Aviso: Tipo de action_on_found '{action_on_found}' no {step_name} desconhecido/não implementado. Template encontrado, mas ação não executada.")
+
 
             else:
-                print(f"Erro: {step_name} ({template_filename}) template NÃO encontrado após {max_attempts} tentativas.")
+                print(f"Erro: {step_name} ({os.path.basename(template_path)}) template NÃO encontrado após {max_attempts} tentativas.")
                 # Por enquanto, paramos a execução se o template essencial não for encontrado
                 # No futuro, podemos adicionar opções de fallback ou continuar dependendo da configuração
                 print("Parando execução da ação devido a template não encontrado.")
-                break # Para a execução se o template não for encontrado
+                return # Sai da função de execução da ação
 
 
             # --- Processar action_after_find ---
@@ -292,14 +342,33 @@ def execultar_acoes(action_name, device_id=None):
                       scroll_direction = action_after.get("direction", "down")
                       scroll_duration = action_after.get("duration_ms", 500)
                       delay_after_scroll_after = action_after.get("delay_after_scroll", 0.5) # Delay config for after scroll
+                      scroll_start_coords = action_after.get("start_coords") # Pode ser None
+                      scroll_end_coords = action_after.get("end_coords") # Pode ser None
 
-                      print(f"Executando ação após encontrar template: Scroll na direção '{scroll_direction}'.")
-                      simulate_scroll(device_id=device_id, direction=scroll_direction, duration_ms=scroll_duration)
+
+                      print(f"Executando ação após encontrar template: Scroll.")
+                      simulate_scroll(
+                           device_id=device_id,
+                           direction=scroll_direction,
+                           duration_ms=scroll_duration,
+                           start_coords=scroll_start_coords, # Passa as coords específicas se existirem
+                           end_coords=scroll_end_coords
+                      )
                       time.sleep(delay_after_scroll_after) # Delay após o scroll
 
-                 # TODO: Adicionar outros tipos de actions_after_find here (ex: wait)
+                 elif after_type == "wait":
+                      wait_duration = action_after.get("duration_seconds")
+                      if isinstance(wait_duration, (int, float)) and wait_duration > 0:
+                          print(f"Executando ação após encontrar template: Esperando por {wait_duration} segundos.")
+                          time.sleep(wait_duration)
+                      else:
+                          print(f"Aviso: Configuração inválida para action_after_find wait em {step_name}.")
+
+
                  else:
-                      print(f"Aviso: Tipo de action_after_find '{after_type}' no {step_name} desconhecido/não implementado.")
+                      # Ignora chaves que começam com '#'
+                      if not after_type or not after_type.startswith("#"):
+                           print(f"Aviso: Tipo de action_after_find '{after_type}' no {step_name} desconhecido/não implementado.")
 
 
         elif step_type == "coords":
@@ -329,20 +398,24 @@ def execultar_acoes(action_name, device_id=None):
 
 
         else:
-            print(f"Erro: Passo {step_number} ('{step_name}') tem tipo '{step_type}' desconhecido ou faltando. Pulando passo.")
-            continue # Pula para o próximo passo se o tipo for inválido/não implementado
+             # Ignora chaves que começam com '#'
+             if not step_type or not step_type.startswith("#"):
+                  print(f"Erro: Passo {step_number} ('{step_name}') tem tipo '{step_type}' desconhecido ou faltando. Pulando passo.")
+             continue # Pula para o próximo passo se o tipo for inválido/não implementado (ou for um comentário)
 
     print(f"\nExecução da ação '{action_name}' finalizada.")
 
+# Removidos exemplos de uso direto. As funções agora são importadas e usadas em outros scripts.
+# # Exemplo de uso (descomente para testar após criar a pasta da ação, templates e sequence.json):
+# # action_to_execute = "coleta_item" # Substitua pelo nome da ação
+# # device_id_execution = 'RXCTB03EXVK' # Substitua pelo ID do seu dispositivo
+# # execultar_acoes(action_to_execute, device_id=device_id_execution)
 
-# Exemplo de uso (descomente para testar após criar a pasta da ação, templates e sequence.json):
-# action_to_execute = "coleta_item" # Substitua pelo nome da ação
-# device_id_execution = 'RXCTB03EXVK' # Substitua pelo ID do seu dispositivo
-# execultar_acoes(action_to_execute, device_id=device_id_execution)
-
-# Exemplo de teste da nova função simulate_scroll (descomente para testar):
-# device_id_scroll_test = 'RXCTB03EXVK' # Substitua pelo ID do seu dispositivo
-# print("\nTestando scroll para cima...")
-# simulate_scroll(device_id=device_id_scroll_test, direction="up", duration_ms=800)
-# print("\nTestando scroll para baixo...")
-# simulate_scroll(device_id=device_id_scroll_test, direction="down", duration_ms=800)
+# # Exemplo de teste da nova função simulate_scroll (descomente para testar):
+# # device_id_scroll_test = 'RXCTB03EXVK' # Substitua pelo ID do seu dispositivo
+# # print("\nTestando scroll para cima...")
+# # simulate_scroll(device_id=device_id_scroll_test, direction="up", duration_ms=800)
+# # print("\nTestando scroll para baixo...")
+# # simulate_scroll(device_id=device_id_scroll_test, direction="down", duration_ms=800)
+# # print("\nTestando scroll com coordenadas específicas (exemplo)...")
+# # simulate_scroll(device_id=device_id_scroll_test, start_coords=[500, 800], end_coords=[500, 200], duration_ms=800)

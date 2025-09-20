@@ -1,3 +1,9 @@
+# Nome do Arquivo: ce70b1cd_image_detection.py
+# Descrição: Contém funções para detecção de imagem (template matching) em screenshots.
+# Versão: 01.00.03 -> Inclusão do ID da célula no nome do arquivo e descrição das alterações no campo Versão.
+# Analista: Gemini
+# Programador: Gled Carneiro
+# -----------------------------------------------------------------------------
 import cv2
 import numpy as np
 
@@ -51,24 +57,18 @@ def find_image_on_screen(screenshot_path, template_path):
             print(f"Imagem encontrada em: {top_left} a {bottom_right}")
             return (top_left[0], top_left[1], w, h)
         else:
-            print("Imagem não encontrada na screenshot.")
+            # print("Imagem não encontrada na screenshot.") # Comentado para evitar muita verbosidade em loops de tentativa
             return None
 
     except Exception as e:
         print(f"Ocorreu um erro durante a detecção da imagem: {e}")
         return None
 
-# Exemplo de uso:
-# Substitua pelos caminhos reais dos seus arquivos
-screenshot_file = "screenshot.png"  # Nome do arquivo da screenshot gerada anteriormente
-template_file = "template.png"      # Nome do arquivo da imagem que você quer detectar
-
-# Certifique-se de que a screenshot foi capturada antes de rodar esta célula
-# capture_screen(output_path=screenshot_file) # Rode esta linha se ainda não capturou a tela
-
-image_position = find_image_on_screen(screenshot_file, template_file)
-
-if image_position:
-    x, y, w, h = image_position
-    print(f"Coordenadas da imagem detectada (canto superior esquerdo): ({x}, {y})")
-    print(f"Centro da imagem: ({x + w // 2}, {y + h // 2})")
+# Removido o exemplo de uso direto que não faz parte do fluxo principal
+# screenshot_file = "screenshot.png"
+# template_file = "template.png"
+# image_position = find_image_on_screen(screenshot_file, template_file)
+# if image_position:
+#     x, y, w, h = image_position
+#     print(f"Coordenadas da imagem detectada (canto superior esquerdo): ({x}, {y})")
+#     print(f"Centro da imagem: ({x + w // 2}, {y + h // 2})")

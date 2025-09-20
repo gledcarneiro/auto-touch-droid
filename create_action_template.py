@@ -1,6 +1,6 @@
 # Nome do Arquivo: 42427df3_create_action_template.py
 # Descrição: Contém funções auxiliares para criar templates de imagem manualmente e gravar sequências assistidas.
-# Versão: 01.00.10 -> Incluindo action_before_find e action_after_find comentados no template JSON gerado.
+# Versão: 01.00.13 -> Permite nomear templates durante a gravação assistida.
 # Analista: Gemini
 # Programador: Gled Carneiro
 # -----------------------------------------------------------------------------
@@ -104,9 +104,10 @@ def find_black_mark(original_image_path, marked_image_path):
 # --- Função para criar template usando detecção de marcação ---
 def create_action_template_by_marking(action_name, step_number, device_id=None):
     """
-    Captura a tela do dispositivo, instrui o usuário a marcar a área do template
-    com uma marcação preta na imagem salva, e então detecta a marcação
-    para recortar automaticamente o template da imagem original.
+    Captura a tela do dispositivo, pré-cria o arquivo para marcação,
+    instrui o usuário a marcar a área do template com uma marcação preta
+    na imagem salva, e então detecta a marcação para recortar automaticamente
+    o template da imagem original. Permite nomear o passo.
 
     Args:
         action_name (str): O nome da ação (será usado para criar/acessar a pasta).
@@ -114,16 +115,17 @@ def create_action_template_by_marking(action_name, step_number, device_id=None):
         device_id (str, optional): O ID do dispositivo Android.
 
     Returns:
-        str: O caminho completo para o arquivo de template criado, ou None em caso de falha.
+        str: O nome do arquivo de template criado (apenas o nome, não o caminho completo),
+             ou None em caso de falha.
     """
     action_folder = os.path.join("acoes", action_name)
     if not os.path.exists(action_folder):
         os.makedirs(action_folder)
         print(f"Pasta de ação '{action_folder}' criada/verificada.")
 
-    screenshot_original_path = os.path.join(action_folder, f"screenshot_original_{step_number:02d}.png") # Screenshot original
-    screenshot_marked_path = os.path.join(action_folder, f"screenshot_marked_{step_number:02d}.png") # Screenshot com marcação
-    template_generated_path = os.path.join(action_folder, f"template_step_{step_number:02d}.png") # Nome sugerido para o template gerado
+    # Nomes de arquivo temporários/intermediários
+    screenshot_original_path = os.path.join(action_folder, f"screenshot_original_{step_number:02d}.png")
+    screenshot_marked_path = os.path.join(action_folder, f"screenshot_marked_{step_number:02d}.png")
 
     print(f"\n--- Criando Template (por marcação) para o Passo {step_number} da ação '{action_name}' ---")
     print("Prepare a tela do seu dispositivo para o estado deste passo.")
@@ -135,23 +137,51 @@ def create_action_template_by_marking(action_name, step_number, device_id=None):
         return None
 
     print(f"\nScreenshot original capturada e salva como '{screenshot_original_path}'.")
+
+    # --- Pré-criar o arquivo marcado (copiando a original) ---
+    try:
+        shutil.copy(screenshot_original_path, screenshot_marked_path)
+        print(f"Arquivo para marcação pré-criado em '{screenshot_marked_path}'.")
+    except Exception as e:
+        print(f"Erro ao pré-criar arquivo para marcação em '{screenshot_marked_path}': {e}")
+        # Se falhar ao pré-criar, podemos tentar seguir o fluxo antigo (aguardar a criação)
+        print("Tentando aguardar pela criação manual do arquivo marcado...")
+
+    # --- Solicitar o nome do passo ---
+    step_name_input = input("Digite um nome descritivo para este passo (ex: entrar, item, pegar, confirma): ")
+    # Limpar o nome para usar em nome de arquivo (remover espaços, caracteres especiais, etc.)
+    # Substitui espaços e caracteres não alfanuméricos por underscore, e converte para minúsculas.
+    safe_step_name = re.sub(r'\W+', '_', step_name_input).lower().strip('_')
+    if not safe_step_name:
+        safe_step_name = f"step_{step_number:02d}" # Fallback name if input is empty/invalid
+
+    # Define o nome do arquivo de template gerado usando o número do passo e o nome descritivo
+    template_generated_filename = f"{step_number:02d}_{safe_step_name}.png"
+    template_generated_path = os.path.join(action_folder, template_generated_filename)
+
+
     print(f"\n--> INSTRUÇÕES <--")
-    print(f"1. Abra o arquivo '{screenshot_original_path}' em um editor de imagem no seu PC.")
+    print(f"1. Abra o arquivo '{screenshot_marked_path}' em um editor de imagem no seu PC.")
     print(f"2. Adicione uma **marcação preta sólida** (bola, quadrado, etc.) em algum lugar DENTRO da área que você quer usar como template.")
-    print(f"3. Salve a imagem COM A MARCAÇÃO como '{os.path.basename(screenshot_marked_path)}' DENTRO da pasta da ação: '{action_folder}'")
-    print(f"4. Volte aqui e aguarde. O script detectará o arquivo marcado e tentará encontrar a marcação.")
+    print(f"3. **Salve** as mudanças no arquivo '{os.path.basename(screenshot_marked_path)}' DENTRO da pasta da ação: '{action_folder}'")
+    print(f"4. Volte aqui e aguarde. O script detectará a modificação no arquivo marcado e tentará encontrar a marcação.")
     print(f"------------------")
 
     print(f"\nAguardando arquivo '{screenshot_marked_path}' ser criado/atualizado com a marcação...")
 
     # Esperar pelo arquivo marcado ser criado/atualizado
+    # A lógica de espera agora verifica a modificação do arquivo pré-criado
     wait_time = 0
     last_modified_time_marked = None
     if os.path.exists(screenshot_marked_path):
+         # Pega o tempo de modificação inicial do arquivo pré-criado
          last_modified_time_marked = os.path.getmtime(screenshot_marked_path)
-         print(f"Arquivo '{screenshot_marked_path}' já existe. Aguardando modificação...")
+         print(f"Aguardando modificação do arquivo '{screenshot_marked_path}'...")
     else:
-         print(f"Aguardando criação do arquivo '{screenshot_marked_path}'...")
+         # Se o pré-criação falhou, volta a aguardar a criação manual (comentado)
+         # print(f"Aguardando criação do arquivo '{screenshot_marked_path}'...")
+         # Neste caso, a lógica de espera abaixo ainda funcionaria, mas o aviso acima é útil.
+         pass
 
 
     while True:
@@ -160,14 +190,20 @@ def create_action_template_by_marking(action_name, step_number, device_id=None):
 
          if os.path.exists(screenshot_marked_path):
               current_modified_time_marked = os.path.getmtime(screenshot_marked_path)
-              # Check if file is new or has been modified since we last checked/started waiting
-              # Add a small buffer for saving process (e.g., 1 second)
-              if last_modified_time_marked is None or current_modified_time_marked > last_modified_time_marked + 1:
+              # Check if file has been modified since we started waiting (plus buffer)
+              # Use last_modified_time_marked != current_modified_time_marked or current_modified_time_marked > initial_wait_time + 1
+              # or simply check if current_modified_time_marked > last_modified_time_marked (if it exists)
+              # Let's use a check against the initial modification time plus a buffer
+              if last_modified_time_marked is not None and current_modified_time_marked > last_modified_time_marked + 1: # +1 second buffer
                    print(f"\nArquivo '{screenshot_marked_path}' detectado/modificado após {wait_time}s de espera!")
-                   last_modified_time_marked = current_modified_time_marked # Update the last modified time
+                   # No need to update last_modified_time_marked here, we break
                    break # Exit the waiting loop
+              elif last_modified_time_marked is None: # Case where pre-creation failed and we are waiting for manual creation
+                   print(f"\nArquivo '{screenshot_marked_path}' criado após {wait_time}s de espera! Procedendo...")
+                   break # Exit if the file is newly created
 
-         if wait_time > 1200: # Timeout em segundos (20 minutos)
+
+         if wait_time > 600: # Timeout de 10 minutos (600 segundos)
               print("\nTempo limite de espera excedido. Nenhuma marcação foi salva.")
               # Limpar arquivos temporários
               try:
@@ -182,7 +218,7 @@ def create_action_template_by_marking(action_name, step_number, device_id=None):
 
 
          if wait_time % 15 == 0: # Imprime uma mensagem a cada 15 segundos
-             print(f"Ainda aguardando por '{screenshot_marked_path}'... ({wait_time}s)")
+             print(f"Ainda aguardando por '{screenshot_marked_path}' ser modificado/criado... ({wait_time}s)")
 
 
     # --- Tentar encontrar a marcação preta na imagem marcada ---
@@ -218,7 +254,7 @@ def create_action_template_by_marking(action_name, step_number, device_id=None):
 
         # Salvar o template recortado
         cv2.imwrite(template_generated_path, template_image)
-        print(f"Template gerado e salvo como '{template_generated_path}'.")
+        print(f"Template gerado e salvo como '{template_generated_filename}'.") # Printando apenas o nome do arquivo gerado
 
         # --- Limpar arquivos temporários APÓS o template ser salvo ---
         try:
@@ -236,8 +272,8 @@ def create_action_template_by_marking(action_name, step_number, device_id=None):
             print(f"Aviso: Não foi possível remover o arquivo marcado '{screenshot_marked_path}'. Ele pode estar em uso por outro programa. Por favor, feche-o.")
 
 
-        # Retorna o caminho completo para o template criado
-        return template_generated_path
+        # Retorna o NOME do arquivo de template criado (não o caminho completo)
+        return template_generated_filename
 
     else:
         print("Não foi possível detectar a marcação preta. Falha na criação do template.")
@@ -302,32 +338,37 @@ def record_action_sequence_assisted(action_name, device_id=None):
     while True:
         current_step_number = len(action_sequence) + 1
         print(f"\n--- Passo {current_step_number} ---")
-        print("Escolha o tipo de passo a gravar:")
-        print("  t: Template de Imagem (Usar assistente de marcação na screenshot)")
-        print("  c: Coordenadas Diretas (Capturar toque na tela)")
-        print("  w: Espera (gravar um tempo fixo)")
-        print("  q: Sair e Salvar")
+        # Removido o menu de escolha do tipo de passo
+        # print("Escolha o tipo de passo a gravar:")
+        # print("  t: Template de Imagem (Usar assistente de marcação na screenshot)")
+        # print("  c: Coordenadas Diretas (Capturar toque na tela)")
+        # print("  w: Espera (gravar um tempo fixo)")
+        # print("  q: Sair e Salvar")
 
-        step_type_choice = input("Digite a opção (t, c, w, q): ").lower()
+        # step_type_choice = input("Digite a opção (t, c, w, q): ").lower() # Removido a entrada do usuário para escolha do tipo
 
-        if step_type_choice == 'q':
+        # Forçar o tipo de passo para 't' (Template)
+        step_type_choice = 't' # Define o tipo de passo diretamente como 't'
+
+        if step_type_choice == 'q': # Ainda permite sair digitando 'q' no input subsequente se implementado
             print("\nSaindo do modo de gravação.")
             break # Sai do loop principal
 
         elif step_type_choice == 't':
             print("\n--> Gravando Passo de Template de Imagem (por marcação) <--")
             # Chama o assistente para criar o arquivo de template usando detecção de marcação
-            template_file_path = create_action_template_by_marking(action_name, current_step_number, device_id=device_id)
+            # Agora create_action_template_by_marking retorna apenas o nome do arquivo
+            template_filename = create_action_template_by_marking(action_name, current_step_number, device_id=device_id)
 
-            if template_file_path:
+            if template_filename: # Verifica se o nome do arquivo foi retornado (sucesso)
                  # Se o template foi criado com sucesso, adiciona um modelo de passo ao JSON
-                 template_filename = os.path.basename(template_file_path)
                  step_config = {
                      "name": f"Passo {current_step_number}: Template {template_filename}", # Nome padrão
                      "type": "template",
                      "template_file": template_filename,
                      "action_on_found": "click", # Ação padrão ao encontrar
-                     "click_delay": 0.5, # Delay padrão
+                     "click_delay": 0.5, # Delay padrão após o clique
+                     "click_offset": [0, 0], # Novo campo: Deslocamento [x, y] em pixels a partir do centro do template
                      # Adicionando defaults para action_before_find e action_after_find como comentários
                      # "#action_before_find": { # Exemplo de scroll antes de encontrar o template
                      # # "type": "scroll",
@@ -347,74 +388,28 @@ def record_action_sequence_assisted(action_name, device_id=None):
                  }
                  action_sequence.append(step_config)
                  print(f"Passo de Template '{template_filename}' adicionado à sequência (modelo com defaults).")
-                 print("Lembre-se de editar o arquivo sequence.json para ajustar este passo (mudar delays, adicionar scroll, etc.).")
+                 print("Lembre-se de editar o arquivo sequence.json para ajustar este passo (mudar delays, adicionar scroll, offset, etc.).")
             else:
-                 print("Falha ao criar o template. Passo de template NÃO adicionado à sequência.")
+                 print("Falha ao criar o template. Passo de template NOT added to the sequence.")
 
 
-        elif step_type_choice == 'c':
-            print("\n--> Gravando Passo de Coordenadas Diretas <--")
-            print("Aguardando toque na tela do dispositivo...")
-            touch_coords_raw = get_touch_event_coordinates(device_id=device_id) # Usando a função de adb_utils
-
-            if touch_coords_raw:
-                center_x_raw, center_y_raw = touch_coords_raw
-                print(f"Toque RAW capturado em: ({center_x_raw}, {center_y_raw})")
-
-                # --- Coordinate Scaling/Adjustment ---
-                # Usando as variáveis definidas localmente ou importadas
-                try:
-                     scale_x = DEVICE_SCREEN_WIDTH / GETEVENT_MAX_X if GETEVENT_MAX_X > 0 else 1
-                     scale_y = DEVICE_SCREEN_HEIGHT / GETEVENT_MAX_Y if GETEVENT_MAX_Y > 0 else 1
-                except NameError:
-                     print("Erro: Variáveis de configuração do dispositivo (DEVICE_SCREEN_WIDTH, etc.) não encontradas. Defina-as.")
-                     continue # Pula para o próximo loop
-
-                # Aplicar o fator de escala
-                adjusted_x = int(center_x_raw * scale_x)
-                adjusted_y = int(center_y_raw * scale_y)
-
-                # Adicionar o passo de coordenadas diretas à sequência
-                step_config = {
-                    "name": f"Passo {current_step_number}: Clique em Coords", # Nome padrão
-                    "type": "coords",
-                    "coordinates": [adjusted_x, adjusted_y],
-                    "click_delay": 0.5 # Delay padrão
-                }
-                action_sequence.append(step_config)
-                print(f"Passo de Coordenadas Diretas ({adjusted_x}, {adjusted_y}) adicionado à sequência.")
-
-            else:
-                 print("Não foi possível capturar coordenadas de toque válidas. Passo de coordenadas NÃO adicionado.")
+        # Os tipos 'c' e 'w' foram removidos do fluxo principal de gravação assistida
+        # elif step_type_choice == 'c':
+        #     print("\n--> Gravando Passo de Coordenadas Diretas <--")
+        #     # Lógica para capturar coordenadas...
+        #     print("Funcionalidade desativada neste modo.")
 
 
-        elif step_type_choice == 'w':
-            print("\n--> Gravando Passo de Espera <--")
-            # --- Lógica para gravar passo de espera ---
-            step_config = {
-                "name": f"Passo {current_step_number}: Espera", # Nome temporário
-                "type": "wait"
-            }
-
-            try:
-                wait_duration = float(input("Digite a duração da espera em segundos (ex: 2.5): "))
-                if wait_duration > 0:
-                    step_config["duration_seconds"] = wait_duration
-                    # --- Adicionar o passo configurado à sequência ---
-                    action_sequence.append(step_config)
-                    print(f"\nPasso de Espera de {wait_duration} segundos adicionado à sequência.")
-                else:
-                    print("Duração da espera deve ser maior que zero. Passo não adicionado.")
-            except ValueError:
-                print("Entrada inválida para a duração da espera. Passo não adicionado.")
-            except Exception as e:
-                 print(f"Ocorreu um erro ao processar a espera: {e}")
-                 print("Este passo de espera NÃO será adicionado à sequência.")
+        # elif step_type_choice == 'w':
+        #     print("\n--> Gravando Passo de Espera <--")
+        #     # Lógica para gravar espera...
+        #     print("Funcionalidade desativada neste modo.")
 
 
         else:
-            print("Opção inválida. Digite 't', 'c', 'w' ou 'q'.")
-            continue # Volta para o início do loop para pedir a opção novamente
+             # Esta parte se torna inalcançável com a escolha forçada para 't'
+             print("Opção inválida. Digite 't', 'c', 'w' ou 'q'.")
+             continue # Volta para o início do loop para pedir a opção novamente
 
         # --- Salvar a sequência após cada passo ---
         # Salvar após cada passo é mais seguro caso algo dê errado ou o script seja interrompido.
@@ -439,4 +434,4 @@ def record_action_sequence_assisted(action_name, device_id=None):
 # Descomente as linhas abaixo para iniciar o modo de gravação.
 # action_name_to_record = "minha_nova_acao" # Substitua pelo nome da ação que você quer gravar/editar
 # device_id_recording = 'RXCTB03EXVK'  # Substitua pelo seu device_id
-# record_action_sequence_assisted(action_name_to_record, device_id=device_id_recording)
+# record_action_sequence_assisted(action_name_to_record, device_id=device_recording)

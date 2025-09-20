@@ -1,15 +1,64 @@
 [
     {
-        "name": "Passo 1: Template template_step_01.png",
+        "name": "Passo 1: Template 01_google.png",
         "type": "template",
-        "template_file": "template_step_01.png",
+        "template_file": "01_google.png",
         "action_on_found": "click",
-        "click_delay": 1.5
+        "click_delay": 0.5,
+        "click_offset": [
+            0,
+            0
+        ],
+        "max_attempts": 5,
+        "attempt_delay": 1.0,
+        "initial_delay": 2.0
     },
     {
-        "name": "Passo 2: Template template_step_02.png",
+        "name": "Passo 2: Template 02_login_gled.png",
         "type": "template",
-        "template_file": "template_step_02.png",
+        "template_file": "02_login_gled.png",
+        "action_on_found": "click",
+        "click_delay": 0.5,
+        "click_offset": [
+            0,
+            0
+        ],
+        "max_attempts": 5,
+        "attempt_delay": 1.0,
+        "initial_delay": 2.0
+    },
+    {
+        "name": "Passo 3: Template 03_login_inf.png",
+        "type": "template",
+        "template_file": "03_login_inf.png",
+        "action_on_found": "click",
+        "click_delay": 0.5,
+        "click_offset": [
+            0,
+            0
+        ],
+        "max_attempts": 5,
+        "attempt_delay": 1.0,
+        "initial_delay": 2.0
+    },
+    {
+        "name": "Passo 4: Template 04_login_cav.png",
+        "type": "template",
+        "template_file": "04_login_cav.png",
+        "action_on_found": "click",
+        "click_delay": 0.5,
+        "click_offset": [
+            0,
+            0
+        ],
+        "max_attempts": 5,
+        "attempt_delay": 1.0,
+        "initial_delay": 2.0
+    },
+    {
+        "name": "Passo 5: Template 05_login_c52.png",
+        "type": "template",
+        "template_file": "05_login_c52.png",
         "action_on_found": "click",
         "action_before_find": { 
             "type": "scroll",
@@ -17,6 +66,133 @@
             "duration_ms": 5000,
             "delay_after_scroll": 1.5
         },
-        "click_delay": 1.5
+        "click_delay": 0.5,
+        "click_offset": [
+            0,
+            0
+        ],
+        "max_attempts": 5,
+        "attempt_delay": 1.0,
+        "initial_delay": 2.0
+    },
+    {
+        "name": "Passo 6: Template 06_login_c53.png",
+        "type": "template",
+        "template_file": "06_login_c53.png",
+        "action_on_found": "click",
+        "action_before_find": { 
+            "type": "scroll",
+            "direction": "up",
+            "duration_ms": 5000,
+            "delay_after_scroll": 1.5
+        },
+        "click_delay": 0.5,
+        "click_offset": [
+            0,
+            0
+        ],
+        "max_attempts": 5,
+        "attempt_delay": 1.0,
+        "initial_delay": 2.0
+    },
+    {
+        "name": "Passo 7: Template 07_login_c54.png",
+        "type": "template",
+        "template_file": "07_login_c54.png",
+        "action_on_found": "click",
+        "action_before_find": { 
+            "type": "scroll",
+            "direction": "up",
+            "duration_ms": 5000,
+            "delay_after_scroll": 1.5
+        },
+        "click_delay": 0.5,
+        "click_offset": [
+            0,
+            0
+        ],
+        "max_attempts": 5,
+        "attempt_delay": 1.0,
+        "initial_delay": 2.0
+    },
+    {
+        "name": "Passo 8: Template 08_login_c55.png",
+        "type": "template",
+        "template_file": "08_login_c55.png",
+        "action_on_found": "click",
+        "action_before_find": { 
+            "type": "scroll",
+            "direction": "up",
+            "duration_ms": 500,
+            "delay_after_scroll": 1.5
+        },
+        "click_delay": 0.5,
+        "click_offset": [
+            0,
+            0
+        ],
+        "max_attempts": 5,
+        "attempt_delay": 1.0,
+        "initial_delay": 2.0
+    },
+    {
+        "name": "Passo 9: Template 09_login_c56.png",
+        "type": "template",
+        "template_file": "09_login_c56.png",
+        "action_on_found": "click",
+        "action_before_find": { 
+            "type": "scroll",
+            "direction": "up",
+            "duration_ms": 500,
+            "delay_after_scroll": 1.5
+        },
+        "click_delay": 0.5,
+        "click_offset": [
+            0,
+            0
+        ],
+        "max_attempts": 5,
+        "attempt_delay": 1.0,
+        "initial_delay": 2.0
+    },
+    {
+        "name": "Passo 10: Template 10_login_c57.png",
+        "type": "template",
+        "template_file": "10_login_c57.png",
+        "action_on_found": "click",
+        "action_before_find": { 
+            "type": "scroll",
+            "direction": "up",
+            "duration_ms": 500,
+            "delay_after_scroll": 1.5
+        },
+        "click_delay": 0.5,
+        "click_offset": [
+            0,
+            0
+        ],
+        "max_attempts": 5,
+        "attempt_delay": 1.0,
+        "initial_delay": 2.0
+    },
+    {
+        "name": "Passo 11: Template 11_login_c58.png",
+        "type": "template",
+        "template_file": "11_login_c58.png",
+        "action_on_found": "click",
+        "action_before_find": { 
+            "type": "scroll",
+            "direction": "up",
+            "duration_ms": 500,
+            "delay_after_scroll": 1.5
+        },
+        "click_delay": 0.5,
+        "click_offset": [
+            0,
+            0
+        ],
+        "max_attempts": 5,
+        "attempt_delay": 1.0,
+        "initial_delay": 2.0
     }
 ]
