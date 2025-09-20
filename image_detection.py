@@ -54,7 +54,7 @@ def find_image_on_screen(screenshot_path, template_path):
             # Calcula as coordenadas do canto inferior direito
             bottom_right = (top_left[0] + w, top_left[1] + h)
 
-            print(f"Imagem encontrada em: {top_left} a {bottom_right}")
+            # print(f"Imagem encontrada em: {top_left} a {bottom_right}")
             return (top_left[0], top_left[1], w, h)
         else:
             # print("Imagem não encontrada na screenshot.") # Comentado para evitar muita verbosidade em loops de tentativa

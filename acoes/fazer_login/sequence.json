@@ -18,6 +18,12 @@
         "type": "template",
         "template_file": "02_login_gled.png",
         "action_on_found": "click",
+        "action_before_find": {
+            "type": "scroll",
+            "direction": "up",
+            "duration_ms": 800,
+            "delay_after_scroll": 1.5
+        },
         "click_delay": 0.5,
         "click_offset": [
             0,

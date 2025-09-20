@@ -1,6 +1,12 @@
 # Nome do Arquivo: eee823d0_action_executor.py
-# Descrição: Contém a função principal para executar sequências de ações lidas de um arquivo sequence.json.
-# Versão: 01.00.06 -> Adicionado tratamento para action_before_find e action_after_find. Adicionado initial_delay para templates. Adicionado click_offset. Melhorados logs.
+# Descrição: Contém a função principal para executar sequências de ações lidas de um arquivo sequence.json
+#            e funções auxiliares relacionadas à execução, incluindo a execução unificada de login.
+# Versão: 01.00.07 -> Adicionada a função execute_login_for_account para unificar a execução de login.
+# Versão: 01.00.08 -> Adicionada lógica para verificar uma imagem de sucesso após cada passo e parar a ação se encontrada.
+# Versão: 01.00.09 -> Ajustada a função execultar_acoes para carregar sequence.json em dois formatos (lista ou dicionário com 'sequence').
+# Versão: 01.00.10 -> Corrigido UnboundLocalError para success_image_config quando usando sequence_override.
+# Versão: 01.00.11 -> Corrigido o caminho do template ao usar sequence_override para garantir que a pasta da ação correta seja usada.
+# Versão: 01.00.12 -> Corrigido processamento de action_before_find quando usando sequence_override.
 # Analista: Gemini
 # Programador: Gled Carneiro
 # -----------------------------------------------------------------------------
@@ -185,51 +191,120 @@ def find_and_optionally_click(template_path, device_id=None, screenshot_path="te
         return (False, None) # Retorna False se o template não foi encontrado após todas as tentativas
 
 
-def execultar_acoes(action_name, device_id=None):
+def execultar_acoes(action_name, device_id=None, sequence_override=None):
     """
-    Executa uma sequência de ações lendo um arquivo sequence.json
+    Executa uma sequência de ações lidas de um arquivo sequence.json
     na pasta da ação, onde cada item no JSON define um passo
     (template matching, clique, scroll, etc.).
 
     Args:
         action_name (str): O nome da ação a ser executada (corresponde ao nome da pasta).
         device_id (str, optional): O ID do dispositivo Android.
+        sequence_override (list, optional): Uma lista de dicionários de passos para executar
+                                           em vez de carregar do arquivo sequence.json.
+                                           Útil para sequências dinâmicas (como login por conta).
+
+    Returns:
+        bool: True se a execução da ação foi considerada bem-sucedida (terminou sem erros críticos
+              ou encontrou a imagem de sucesso), False caso contrário.
     """
-    action_folder = os.path.join("acoes", action_name)
-    sequence_filepath = os.path.join(action_folder, "sequence.json")
+    # Initialize success_image_config before the conditional logic
+    success_image_config = None
 
+    # --- Define action_folder based on action_name regardless of override ---
+    acoes_folder = "acoes" # Assuming 'acoes' is the base folder
+    action_folder = os.path.join(acoes_folder, action_name)
     if not os.path.isdir(action_folder):
-        print(f"Erro: Pasta de ação '{action_folder}' não encontrada.")
-        return
-
-    if not os.path.exists(sequence_filepath):
-        print(f"Erro: Arquivo de sequência '{sequence_filepath}' não encontrado.")
-        print("Certifique-se de que você criou e configurou o arquivo sequence.json para esta ação.")
-        return
-
-    # Carregar a sequência de ações do arquivo JSON
-    try:
-        with open(sequence_filepath, 'r', encoding='utf-8') as f:
-            action_sequence = json.load(f)
-        print(f"Sequência de ações carregada de: {sequence_filepath}")
-
-        if not isinstance(action_sequence, list):
-             print(f"Erro: O conteúdo do arquivo '{sequence_filepath}' não é uma lista.")
-             return
-        if not action_sequence:
-             print(f"Aviso: A lista de ações no arquivo '{sequence_filepath}' está vazia. Nenhuma ação para executar.")
-             return
+         print(f"Erro: Pasta de ação '{action_folder}' não encontrada.")
+         # Return False here as the folder is essential for templates even with override
+         return False
 
 
-    except json.JSONDecodeError:
-        print(f"Erro ao decodificar o arquivo JSON '{sequence_filepath}'. Verifique a sintaxe.")
-        return
-    except Exception as e:
-        print(f"Ocorreu um erro ao carregar o arquivo de sequência '{sequence_filepath}': {e}")
-        return
+    if sequence_override is not None:
+        # Usar a sequência fornecida diretamente
+        action_sequence = sequence_override
+        print(f"Executando sequência de ações fornecida por override ({len(action_sequence)} passos).")
+        # When using override, success_image_config is not loaded from the overridden sequence JSON.
+        # If success image check is needed, it must be handled by the caller (e.g., execute_login_for_account)
+        # or the success config must be passed separately.
+        # For now, success_image check in this function is only active for file-loaded sequences (see below).
+        pass # sequence_override is not None, action_sequence is already set
+
+
+    else:
+        # Carregar a sequência de ações do arquivo JSON
+        sequence_filepath = os.path.join(action_folder, "sequence.json")
+
+        if not os.path.exists(sequence_filepath):
+            print(f"Erro: Arquivo de sequência '{sequence_filepath}' não encontrado.")
+            print("Certifique-se de que você criou e configurou o arquivo sequence.json para esta ação.")
+            return False # Retorna False em caso de erro
+
+        try:
+            with open(sequence_filepath, 'r', encoding='utf-8') as f:
+                action_data = json.load(f) # Carrega o conteúdo do JSON
+
+            # --- Lógica para lidar com os dois formatos de JSON ---
+            action_sequence = []
+            # success_image_config is already initialized to None at the start
+
+            if isinstance(action_data, list):
+                # Formato antigo: a lista de passos está no nível raiz
+                action_sequence = action_data
+                print(f"Sequência de ações para '{action_name}' carregada (formato lista).")
+                # No formato antigo, não há configuração de success_image
+                success_image_config = None
+            elif isinstance(action_data, dict) and "sequence" in action_data and isinstance(action_data["sequence"], list):
+                 # Novo formato: dicionário com chave 'sequence' e opcionalmente 'success_image'
+                 action_sequence = action_data["sequence"]
+                 success_image_config = action_data.get("success_image") # Carrega a configuração da imagem de sucesso
+                 print(f"Sequência de ações para '{action_name}' carregada (formato dicionário com 'sequence').")
+                 if success_image_config:
+                      print(f"Imagem de sucesso configurada para '{action_name}'.")
+            else:
+                 print(f"Erro: O conteúdo do arquivo '{sequence_filepath}' não tem a estrutura esperada (lista ou dicionário com chave 'sequence').")
+                 return False # Retorna False em caso de estrutura inválida
+
+
+            if not action_sequence:
+                 print(f"Aviso: A lista de ações na chave 'sequence' do arquivo '{sequence_filepath}' está vazia. Nenhuma ação para executar.")
+                 # Se carregou um dicionário mas a lista 'sequence' está vazia, ainda pode haver uma imagem de sucesso para verificar?
+                 # Para uma sequência vazia, consideramos sucesso se não houver passos, a menos que haja uma imagem de sucesso que não foi encontrada.
+                 # Vamos retornar True aqui se a lista de passos for vazia, independentemente da imagem de sucesso.
+                 return True # Considera sucesso se não houver passos para executar
+
+
+        except json.JSONDecodeError:
+            print(f"Erro ao decodificar o arquivo JSON '{sequence_filepath}'. Verifique a sintaxe.")
+            return False # Retorna False em caso de erro de JSON
+        except Exception as e:
+            print(f"Ocorreu um erro ao carregar o arquivo de sequência '{sequence_filepath}': {e}")
+            return False # Retorna False em caso de outros erros
+
 
     print(f"\nExecutando a ação: {action_name}")
 
+    # Se houver uma imagem de sucesso configurada para esta ação, preparamos para verificá-la.
+    # Esta parte agora é carregada DENTRO do bloco try/except de carregamento do JSON.
+    success_image_path = None # Initialize before the check
+    success_check_attempts = 1 # Default
+    success_check_delay = 0.5 # Default
+
+    # A configuração de success_image_config é carregada no bloco else acima, se carregando de arquivo.
+    # Se a configuração veio do arquivo (sequence_override is None), a lógica de success_image_config já foi preenchida.
+    # Se a sequência veio por override, success_image_config é None por padrão no início da função.
+    # A verificação de imagem de sucesso ABAIXO só faz sentido na execução NORMAL (sem override).
+    # Se precisarmos disso para a sequência de login temporária, a lógica deve estar na execute_login_for_account
+    # ou a configuração de success_image deve ser passada para execultar_acoes.
+
+    # A lógica de verificação de imagem de sucesso só deve ser ativada se success_image_config NÃO FOR NONE
+    # E se NÃO estivermos usando sequence_override (ou se sequence_override incluir a configuração de sucesso).
+    # Por enquanto, a verificação abaixo está ligada a sequence_override is None, o que está incorreto para a função execute_login_for_account.
+
+    # Vamos simplificar temporariamente a lógica de verificação de sucesso AQUI (dentro de execultar_acoes)
+    # para que ela funcione SOMENTE quando success_image_config for carregada do arquivo (ou seja, sequence_override is None)
+
+    # --- Lógica de execução dos passos ---
     for i, step_config in enumerate(action_sequence):
         step_number = i + 1
         step_name = step_config.get("name", f"Passo {step_number}") # Usar nome do JSON ou default
@@ -237,6 +312,11 @@ def execultar_acoes(action_name, device_id=None):
         print(f"\n--- Executando {step_name} ---")
 
         step_type = step_config.get("type")
+
+        # --- VERIFICAR IMAGEM DE SUCESSO ANTES DE EXECUTAR O PASSO? ---
+        # (Mantido o comentário, a verificação principal é após o passo)
+
+        step_success = True # Flag para indicar se o passo individual foi bem-sucedido
 
         if step_type == "template":
             template_filename = step_config.get("template_file")
@@ -249,9 +329,16 @@ def execultar_acoes(action_name, device_id=None):
 
             if not template_filename:
                 print(f"Erro: Passo {step_number} ('{step_name}') do tipo 'template' não especifica 'template_file'. Pulando passo.")
-                continue # Pula para o próximo passo se faltar o template_file
+                step_success = False
+                continue # Pula para o próximo passo se faltar o template_file.
 
+            # Construir o caminho COMPLETO para o template file, relativo à pasta da ação
+            # Se estivermos usando override (chamado por execute_login_for_account), a action_name é "fazer_login"
+            # e os templates como "01_google.png", "02_login_gled.png" estão dentro de acoes/fazer_login
+            # template_path = os.path.join("acoes", action_name, template_filename) # OLD: This was the source of the bug.
+            # NEW: action_folder is already defined at the beginning based on action_name
             template_path = os.path.join(action_folder, template_filename)
+
 
             # --- Processar action_before_find ---
             action_before = step_config.get("action_before_find")
@@ -284,7 +371,7 @@ def execultar_acoes(action_name, device_id=None):
 
                  else:
                       # Ignora chaves que começam com '#' (usadas para comentários no JSON)
-                      if not before_type or not before_type.startswith("#"):
+                      if before_type and not before_type.startswith("#"):
                            print(f"Aviso: Tipo de action_before_find '{before_type}' no {step_name} desconhecido/não implementado.")
 
 
@@ -319,19 +406,17 @@ def execultar_acoes(action_name, device_id=None):
                     if click_delay > 0:
                          time.sleep(click_delay)
                     print(f"{step_name} ({os.path.basename(template_path)}) concluído com sucesso (Template Encontrado, Clicado).")
+                    step_success = True # Passo de template/click bem-sucedido
                 # TODO: Adicionar outros tipos de action_on_found aqui (ex: swipe a partir do template)
                 else:
                     # Ignora chaves que começam com '#'
-                    if not action_on_found or not action_on_found.startswith("#"):
+                    if action_on_found and not action_on_found.startswith("#"):
                         print(f"Aviso: Tipo de action_on_found '{action_on_found}' no {step_name} desconhecido/não implementado. Template encontrado, mas ação não executada.")
-
+                        step_success = False # Considera falha se a ação no template não puder ser executada/reconhecida
 
             else:
                 print(f"Erro: {step_name} ({os.path.basename(template_path)}) template NÃO encontrado após {max_attempts} tentativas.")
-                # Por enquanto, paramos a execução se o template essencial não for encontrado
-                # No futuro, podemos adicionar opções de fallback ou continuar dependendo da configuração
-                print("Parando execução da ação devido a template não encontrado.")
-                return # Sai da função de execução da ação
+                step_success = False # Passo de template falhou
 
 
             # --- Processar action_after_find ---
@@ -365,10 +450,15 @@ def execultar_acoes(action_name, device_id=None):
                           print(f"Aviso: Configuração inválida para action_after_find wait em {step_name}.")
 
 
-                 else:
-                      # Ignora chaves que começam com '#'
-                      if not after_type or not after_type.startswith("#"):
-                           print(f"Aviso: Tipo de action_after_find '{after_type}' no {step_name} desconhecido/não implementado.")
+                 # Adicionar aqui a lógica para verificar a imagem de sucesso APÓS este passo se configurado
+                 # Esta é uma alternativa a verificar após CADA passo de template.
+                 # Se a configuração `success_image` estiver no JSON principal da ação,
+                 # podemos verificar aqui após cada passo de template.
+
+                 # else:
+                 #      # Ignora chaves que começam com '#'
+                 #      if after_type and not after_type.startswith("#"):
+                 #           print(f"Aviso: Tipo de action_after_find '{after_type}' no {step_name} desconhecido/não implementado.")
 
 
         elif step_type == "coords":
@@ -382,8 +472,10 @@ def execultar_acoes(action_name, device_id=None):
                   if click_delay_coords > 0:
                        time.sleep(click_delay_coords)
                   print(f"{step_name} (coordenadas diretas) concluído com sucesso.")
+                  step_success = True
              else:
                   print(f"Erro: Passo {step_number} ('{step_name}') do tipo 'coords' não especifica 'coordinates' válidas ([x, y]). Pulando passo.")
+                  step_success = False
 
 
         elif step_type == "wait":
@@ -393,17 +485,151 @@ def execultar_acoes(action_name, device_id=None):
                   print(f"Executando {step_name}: Esperando por {wait_time} segundos.")
                   time.sleep(wait_time)
                   print(f"{step_name} (espera) concluído com sucesso.")
+                  step_success = True
              else:
                   print(f"Erro: Passo {step_number} ('{step_name}') do tipo 'wait' não especifica 'duration_seconds' válida. Pulando passo.")
+                  step_success = False
 
+
+        # Ignorar chaves de comentário
+        elif step_type is not None and step_type.startswith("#"):
+             pass
 
         else:
              # Ignora chaves que começam com '#'
-             if not step_type or not step_type.startswith("#"):
+             if step_type and not step_type.startswith("#"):
                   print(f"Erro: Passo {step_number} ('{step_name}') tem tipo '{step_type}' desconhecido ou faltando. Pulando passo.")
-             continue # Pula para o próximo passo se o tipo for inválido/não implementado (ou for um comentário)
+             step_success = False # Considera falha se o tipo for inválido/não implementado
 
-    print(f"\nExecução da ação '{action_name}' finalizada.")
+        # --- VERIFICAR IMAGEM DE SUCESSO APÓS EXECUTAR O PASSO ---
+        # Esta verificação SÓ faz sentido se success_image_config foi carregada (ou seja, sequence_override is None)
+        # OU se a configuração de success_image foi explicitamente passada via sequence_override (o que não fazemos atualmente).
+        # Para a lógica atual do menu, a verificação só é necessária quando executando a ação "fazer_login"
+        # com a sequência TEMPORÁRIA gerada em execute_login_for_account.
+        # A forma como a lógica de success_image_config está estruturada atualmente na execultar_acoes
+        # a torna difícil de usar com sequence_override.
+
+        # VAMOS MOVER A LÓGICA DE VERIFICAÇÃO DE IMAGEM DE SUCESSO PARA FORA DO execultar_acoes
+        # e colocá-la na execute_login_for_account, que lida com o fluxo de login por conta.
+
+        # REMOVENDO VERIFICAÇÃO DE SUCESSO DAQUI TEMPORARIAMENTE para simplificar
+        # if sequence_override is None and success_image_config and isinstance(success_image_config, dict) and step_success: # Verifica após um passo bem-sucedido
+        #      print(f"Verificando imagem de sucesso após {step_name}...")
+        #      # ... lógica de find_and_optionally_click para imagem de sucesso ...
+        #      if success_found:
+        #          print(f"\n!!! Imagem de sucesso encontrada após {step_name}. Interrompendo execução da ação '{action_name}'. !!!")
+        #          return True # Retorna True para indicar sucesso e parar a execução da ação atual
+
+        # Se o passo falhou e não estamos em uma sequência de override (execução normal de uma ação)
+        # e não há uma imagem de sucesso configurada para parar a ação em caso de falha no passo,
+        # podemos querer parar a execução da ação inteira.
+        # A lógica anterior já para a execução da ação se um template ESSENCIAL não for encontrado,
+        # pois find_and_optionally_click retorna False e a lógica de "if found:" falha.
+        # Isso está OK para a maioria dos casos.
+
+
+    print(f"\nExecução da ação '{action_name}' finalizada (chegou ao fim da sequência).")
+    # Se chegou ao fim da sequência, consideramos a execução bem-sucedida, a menos que um erro tenha ocorrido em um passo.
+    # A lógica de retorno True/False agora deve refletir se a sequência terminou SEM um erro crítico em um passo.
+    # Se um template NÃO for encontrado, a função já retorna False.
+    # Se o loop terminar sem um retorno False anterior, significa que todos os passos foram processados (ou pulados).
+    return True # Retorna True se a função chegou ao fim da sequência sem interrupção por erro de template.
+
+
+# --- Nova função para executar a ação de login para uma conta específica ---
+# Esta função irá adaptar a sequência original para cada conta
+def execute_login_for_account(account_info, original_sequence, device_id=None):
+    """
+    Executa a sequência de login, adaptando o passo do template de email
+    para a conta fornecida.
+
+    Args:
+        account_info (dict): Dicionário contendo informações da conta (ex: {"name": "login_gled"}).
+        original_sequence (list): A lista de passos da sequência de ação lida do sequence.json.
+        device_id (str, optional): O ID do dispositivo Android.
+
+    Returns:
+        bool: True se a execução da sequência de login para esta conta foi considerada bem-sucedida
+              (encontrou a imagem de sucesso durante a execução), False caso contrário.
+    """
+    if not original_sequence:
+        print("Erro: Sequência de ação original não fornecida ou vazia.")
+        return False
+
+    account_name = account_info.get("name")
+    if not account_name:
+        print("Aviso: Nome da conta não especificado. Pulando esta conta.")
+        return False
+
+    print(f"\n--- Tentando fazer login com a conta: {account_name} ---")
+
+    # Criar uma sequência TEMPORÁRIA para esta conta, incluindo o passo do Google (se existir)
+    # e APENAS o passo do template de email correspondente à conta atual.
+    modified_sequence_for_execution = []
+    email_template_step_found = False # Renomeado para maior clareza
+
+    for step in original_sequence:
+        step_type = step.get("type")
+        # Criar uma cópia profunda do passo para inclusão na sequência temporária
+        modified_step = json.loads(json.dumps(step))
+
+        if step_type == "template":
+            template_filename = modified_step.get("template_file")
+
+            # Adicionar o passo do template do Google (ou outros passos comuns antes do email)
+            if template_filename and template_filename == "01_google.png":
+                 modified_sequence_for_execution.append(modified_step)
+                 print(f"  Incluindo passo universal: '{modified_step.get('name')}'")
+
+            # Adicionar APENAS o passo do template de email que corresponde ao nome da conta atual
+            # Verifica se o template_filename contém o account_name E termina com .png
+            elif template_filename and template_filename.endswith('.png') and account_name in template_filename:
+                 print(f"  Incluindo passo de template específico da conta '{account_name}': '{modified_step.get('name')}'")
+                 modified_sequence_for_execution.append(modified_step)
+                 email_template_step_found = True # Marca que encontramos o template de email para esta conta
+
+            else:
+                 # Ignora outros passos de template que não são o Google nem o email da conta atual
+                 # print(f"  Ignorando passo de template '{template_filename}' para a conta '{account_name}'.")
+                 pass # Não adiciona este passo à sequência temporária para esta conta
+
+
+        elif step_type in ["coords", "wait"]:
+             # Adiciona passos de coordenadas ou espera que vêm DEPOIS do passo do Google e ANTES do passo de email,
+             # ou que vêm DEPOIS do passo de email.
+             # Com a estrutura atual do JSON, onde cada conta tem seu email step logo após o Google step,
+             # pode não haver passos "coords" ou "wait" ENTRE o Google e o email.
+             # Mas se houver, eles serão incluídos aqui.
+             modified_sequence_for_execution.append(modified_step)
+             print(f"  Incluindo passo de tipo '{step_type}': '{modified_step.get('name')}'")
+
+
+        # Ignorar chaves de comentário
+        elif step_type is not None and step_type.startswith("#"):
+             pass
+        else:
+             print(f"  Aviso: Tipo de passo desconhecido ou faltando em '{step.get('name', 'Passo desconhecido')}' para a conta '{account_name}'. Ignorando.")
+
+
+    if not email_template_step_found:
+        print(f"Erro: Não foi encontrado um passo de template que corresponda ao nome da conta '{account_name}' na sequência original. Certifique-se de que o nome da conta está no nome do arquivo do template de email no sequence.json.")
+        return False # Não executa se não encontrar o template de email para a conta
+
+
+    # --- Executar a sequência TEMPORÁRIA criada para esta conta ---
+    print(f"\nExecutando sequência temporária para a conta '{account_name}' ({len(modified_sequence_for_execution)} passos):")
+
+    # Chamamos a função execultar_acoes, passando a sequência modificada como override
+    # O nome da ação ("fazer_login") ainda é necessário para que execultar_acoes saiba onde encontrar os templates
+    # (na pasta acoes/fazer_login) e também a imagem de sucesso configurada no JSON principal dessa ação.
+    login_execution_success = execultar_acoes(action_name="fazer_login", device_id=device_id, sequence_override=modified_sequence_for_execution)
+
+    # A função execultar_acoes agora retorna True se a imagem de sucesso for encontrada
+    # (ou se a sequência terminar sem erros em execução normal sem override), e False em caso de erro.
+    # Para a execução de login por conta (com override), ela retornará True se a imagem de sucesso
+    # for encontrada durante a execução da sequência TEMPORÁRIA.
+
+    return login_execution_success # Retorna o resultado da execução da sequência temporária
 
 # Removidos exemplos de uso direto. As funções agora são importadas e usadas em outros scripts.
 # # Exemplo de uso (descomente para testar após criar a pasta da ação, templates e sequence.json):

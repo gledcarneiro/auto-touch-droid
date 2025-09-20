@@ -142,23 +142,23 @@ def capture_screen(device_id=None, output_path="screenshot.png"):
         result_screencap = subprocess.run(command_screencap, check=True, capture_output=True, text=True, timeout=10)
         # print(f"screencap stdout: {result_screencap.stdout}") # Comentado para evitar muita verbosidade
         # print(f"screencap stderr: {result_screencap.stderr}") # Comentado para evitar muita verbosidade
-        print(f"Screenshot capturada e salva em {device_screenshot_path} no dispositivo.")
+        # print(f"Screenshot capturada e salva em {device_screenshot_path} no dispositivo.")
 
         # Pull to PC
-        print(f"Copiando screenshot para {output_path} no PC...")
+        # print(f"Copiando screenshot para {output_path} no PC...")
         # Timeout for pull command (e.g., 10 seconds)
         result_pull = subprocess.run(command_pull, check=True, capture_output=True, text=True, timeout=10)
         # print(f"pull stdout: {result_pull.stdout}") # Comentado para evitar muita verbosidade
         # print(f"pull stderr: {result_pull.stderr}") # Comentado para evitar muita verbosidade
-        print(f"Screenshot copiada para {output_path} no PC.")
+        # print(f"Screenshot copiada para {output_path} no PC.")
 
         # Clean up device temp file
-        print(f"Removendo arquivo temporário {device_screenshot_path} do dispositivo...")
+        # print(f"Removendo arquivo temporário {device_screenshot_path} do dispositivo...")
         # Timeout for rm command (e.g., 5 seconds)
         result_rm = subprocess.run(command_rm, check=True, capture_output=True, text=True, timeout=5)
         # print(f"rm stdout: {result_rm.stdout}") # Comentado para evitar muita verbosidade
         # print(f"rm stderr: {result_rm.stderr}") # Comentado para evitar muita verbosidade
-        print("Arquivo temporário removido do dispositivo.")
+        # print("Arquivo temporário removido do dispositivo.")
 
 
         return True
@@ -214,7 +214,7 @@ def simulate_touch(x, y, device_id=None):
     try:
         # Adicionado um pequeno timeout para o comando adb input
         subprocess.run(command, check=True, timeout=5)
-        print(f"Toque simulado nas coordenadas ({x}, {y}).")
+        # print(f"Toque simulado nas coordenadas ({x}, {y}).")
     except subprocess.TimeoutExpired as e:
         print(f"Erro de timeout ao simular o toque: {e.cmd}")
     except subprocess.CalledProcessError as e:
