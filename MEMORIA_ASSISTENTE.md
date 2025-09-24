@@ -158,6 +158,36 @@ App: Instalado e funcionando no SM_A736B
 - **Próximo passo:** Configurar Git para sincronização
 - **Problema resolvido:** VisionCamera removido, path Windows corrigido
 
+## 🎮 CONTEXTO PESSOAL DO USUÁRIO (GLEDSTON)
+
+### **Sobre o Jogo:**
+- **League of Kingdoms** (nplus) - jogando há vários anos
+- **Estratégia de monetização**: Múltiplas contas automatizadas
+- **Motivação**: Transformou hobby em renda
+- **Evolução**: PC → Mobile (projeto atual)
+
+### **Perfil do Desenvolvedor:**
+- **Viciado em programar** 😄 - "não me vejo sem programar"
+- **Horário preferido**: Noite (após família dormir)
+- **Setup**: Cadeira de balanço (quer uma gamer! 😂)
+- **Background**: Hardware → Software
+- **Era pré-IA**: Semanas debuggando, noites no Stack Overflow
+
+### **Rotina:**
+- **Família em primeiro lugar** ⭐
+- **Programação noturna** 🌙
+- **Dois ambientes**: Escritório + Casa
+- **Não bebe muito café** ☕
+- **Prefere silêncio** para programar
+
+## 🤔 CURIOSIDADES PENDENTES (Para testar memória em casa):
+
+1. **League of Kingdoms**: Qual estratégia mais lucrativa? Recursos/Batalhas/Comércio?
+2. **Quantas contas** consegue gerenciar simultaneamente?
+3. **Como é ver** todas rodando em sincronia?
+4. **Qual foi** o bug mais bizarro que enfrentou?
+5. **Setup dos sonhos**: Além da cadeira gamer, o que mais quer?
+
 ## 🎯 LIÇÕES APRENDIDAS
 - **Windows path limit:** Resolvido movendo para C:\vga\
 - **VisionCamera:** Causava problemas de build, removido
