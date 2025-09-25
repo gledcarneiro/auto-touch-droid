@@ -1,5 +1,24 @@
-# 🧠 MEMÓRIA DO ASSISTENTE - PROJETO AUTO-TOUCH-DROID
-*Backup completo para continuidade entre escritório e casa*
+# 📝 MEMÓRIA DO ASSISTENTE - Auto Touch Droid
+
+## 🎯 **OBJETIVO PRINCIPAL**
+Criar um sistema de automação para dispositivos Android que permita:
+- Controle remoto via Python
+- Interface mobile React Native
+- Overlay nativo para controle em tempo real
+
+## 📊 **STATUS ATUAL - SESSÃO 25/09/2024**
+- ✅ **Backend Python**: Servidor funcionando (porta 8080)
+- ✅ **App React Native**: Interface completa e funcional
+- ✅ **Overlay Nativo**: Implementado com correções de transparência
+- ✅ **Integração**: Conectividade estabelecida e testada
+- ✅ **Conexão**: App ↔ Servidor Python funcionando perfeitamente
+- ✅ **ADB Tunnel**: Configurado corretamente (tcp:8080)
+
+## 🔧 **ÚLTIMAS CORREÇÕES IMPLEMENTADAS**
+- **Problema de Porta**: Corrigido conflito 5000 vs 8080
+- **Overlay Transparente**: Removido fundo preto, apenas botões flutuantes
+- **Flags WindowManager**: Ajustadas para não interceptar toques
+- **Permissões**: SYSTEM_ALERT_WINDOW concedida e funcionando
 
 ## 👤 CONTEXTO DO USUÁRIO
 - **Nome:** Gled (Gledston Carneiro)
