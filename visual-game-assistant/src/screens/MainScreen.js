@@ -1,50 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
-  ScrollView,
   TouchableOpacity,
+  StyleSheet,
   Alert,
+  SafeAreaView,
+  ScrollView,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function MainScreen() {
-  const [isDetecting, setIsDetecting] = useState(false);
+  const [overlayActive, setOverlayActive] = useState(true);
+  const [serverStatus, setServerStatus] = useState('Desconectado');
 
-  // Templates mockados para teste
-  const mockTemplates = [
-    {
-      name: 'fazer_login',
-      displayName: 'Fazer Login',
-      description: 'Automatizar processo de login',
-      templates: ['01_google.png', '02_login_gled.png']
-    },
-    {
-      name: 'pegar_bau',
-      displayName: 'Pegar Baú',
-      description: 'Coletar baús automaticamente',
-      templates: ['template_step_01.png', 'template_step_02.png']
-    },
-    {
-      name: 'pegar_recursos',
-      displayName: 'Pegar Recursos',
-      description: 'Coletar recursos do jogo',
-      templates: ['template_step_01.png', 'template_step_02.png']
-    }
-  ];
-
-  const startDetection = async (templateGroup) => {
-    setIsDetecting(true);
-    
-    // Simular detecção
+  useEffect(() => {
+    // Simula verificação de status
     setTimeout(() => {
-      Alert.alert(
-        'Teste OK!',
-        `Template "${templateGroup.displayName}" selecionado!\n\nEm breve conectaremos com o sistema Python.`
-      );
-      setIsDetecting(false);
+      setServerStatus('Aguardando Python Backend...');
     }, 1000);
+  }, []);
+
+  const showInstructions = () => {
+    Alert.alert(
+      'Como Usar o Visual Game Assistant',
+      '1. Abra o League of Kingdoms\n' +
+      '2. Os controles aparecerão automaticamente sobre o jogo\n' +
+      '3. Use o botão ☰ para abrir o menu de ações\n' +
+      '4. Toque em qualquer ação para executá-la\n' +
+      '5. Use 🛑 para parar emergencialmente\n\n' +
+      'O overlay é transparente e não interfere no jogo!',
+      [{ text: 'Entendi!' }]
+    );
   };
 
   const renderTemplateGroup = (group) => (
@@ -69,33 +55,60 @@ export default function MainScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Visual Game Assistant</Text>
-        <Text style={styles.subtitle}>
-          Detecção Visual Inteligente
-        </Text>
+        <Text style={styles.title}>🎮 Visual Game Assistant</Text>
+        <Text style={styles.subtitle}>Overlay Transparente para League of Kingdoms</Text>
       </View>
 
       <ScrollView style={styles.content}>
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Templates Disponíveis</Text>
-          {mockTemplates.map(renderTemplateGroup)}
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Status</Text>
-          <View style={styles.statusCard}>
-            <Text style={styles.statusText}>
-              {isDetecting ? '🔍 Processando...' : '✅ Pronto para detectar'}
+        {/* Status do Sistema */}
+        <View style={styles.statusCard}>
+          <Text style={styles.cardTitle}>📊 Status do Sistema</Text>
+          <View style={styles.statusRow}>
+            <Text style={styles.statusLabel}>Overlay:</Text>
+            <Text style={[styles.statusValue, { color: overlayActive ? '#4CAF50' : '#F44336' }]}>
+              {overlayActive ? '✅ Ativo' : '❌ Inativo'}
+            </Text>
+          </View>
+          <View style={styles.statusRow}>
+            <Text style={styles.statusLabel}>Backend Python:</Text>
+            <Text style={[styles.statusValue, { color: '#FF9800' }]}>
+              🟡 {serverStatus}
             </Text>
           </View>
         </View>
-      </ScrollView>
 
-      {isDetecting && (
-        <View style={styles.loadingOverlay}>
-          <Text style={styles.loadingText}>Detectando...</Text>
+        {/* Instruções */}
+        <View style={styles.instructionsCard}>
+          <Text style={styles.cardTitle}>📖 Como Usar</Text>
+          <TouchableOpacity style={styles.instructionButton} onPress={showInstructions}>
+            <Text style={styles.instructionButtonText}>Ver Instruções Completas</Text>
+          </TouchableOpacity>
+          
+          <View style={styles.quickSteps}>
+            <Text style={styles.stepText}>1. Abra o League of Kingdoms</Text>
+            <Text style={styles.stepText}>2. Use os controles transparentes</Text>
+            <Text style={styles.stepText}>3. Execute ações automaticamente</Text>
+          </View>
         </View>
-      )}
+
+        {/* Ações Disponíveis */}
+        <View style={styles.actionsCard}>
+          <Text style={styles.cardTitle}>⚡ Ações Disponíveis</Text>
+          <Text style={styles.actionsInfo}>
+            As ações são carregadas dinamicamente da pasta 'acoes/'.
+            Use o overlay transparente para acessá-las durante o jogo.
+          </Text>
+        </View>
+
+        {/* Aviso Importante */}
+        <View style={styles.warningCard}>
+          <Text style={styles.warningTitle}>⚠️ Importante</Text>
+          <Text style={styles.warningText}>
+            Este app funciona como overlay transparente. 
+            Minimize esta tela e abra o League of Kingdoms para usar os controles!
+          </Text>
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
 }
@@ -107,110 +120,112 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 20,
+    backgroundColor: '#2d2d2d',
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
+    borderBottomColor: '#444',
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     color: '#fff',
-    marginBottom: 5,
+    textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
-    color: '#888',
+    color: '#ccc',
+    textAlign: 'center',
+    marginTop: 5,
   },
   content: {
     flex: 1,
     padding: 20,
   },
-  section: {
-    marginBottom: 30,
+  statusCard: {
+    backgroundColor: '#2d2d2d',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#444',
   },
-  sectionTitle: {
+  instructionsCard: {
+    backgroundColor: '#2d2d2d',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  actionsCard: {
+    backgroundColor: '#2d2d2d',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#444',
+  },
+  warningCard: {
+    backgroundColor: '#3d2d1d',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#664',
+  },
+  cardTitle: {
     fontSize: 18,
     fontWeight: 'bold',
     color: '#fff',
-    marginBottom: 15,
-  },
-  templateCard: {
-    backgroundColor: '#2a2a2a',
-    borderRadius: 10,
-    padding: 15,
     marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#333',
   },
-  cardHeader: {
+  statusRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
   },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#fff',
-  },
-  cardSubtitle: {
-    fontSize: 12,
-    color: '#888',
-  },
-  cardDescription: {
+  statusLabel: {
     fontSize: 14,
     color: '#ccc',
   },
-  emptyState: {
-    padding: 40,
-    alignItems: 'center',
-  },
-  emptyText: {
-    color: '#888',
-    fontSize: 16,
-  },
-  statusCard: {
-    backgroundColor: '#2a2a2a',
-    borderRadius: 10,
-    padding: 15,
-    borderWidth: 1,
-    borderColor: '#333',
-  },
-  statusText: {
-    color: '#fff',
-    fontSize: 16,
-    textAlign: 'center',
-  },
-  resultCard: {
-    backgroundColor: '#2a2a2a',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
-    borderLeftWidth: 3,
-    borderLeftColor: '#4CAF50',
-  },
-  resultText: {
-    color: '#fff',
+  statusValue: {
     fontSize: 14,
     fontWeight: 'bold',
   },
-  resultPosition: {
-    color: '#888',
-    fontSize: 12,
-    marginTop: 4,
+  instructionButton: {
+    backgroundColor: '#4CAF50',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 15,
   },
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
+  instructionButtonText: {
     color: '#fff',
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
+    textAlign: 'center',
+  },
+  quickSteps: {
+    marginTop: 10,
+  },
+  stepText: {
+    fontSize: 14,
+    color: '#ccc',
+    marginBottom: 5,
+  },
+  actionsInfo: {
+    fontSize: 14,
+    color: '#ccc',
+    lineHeight: 20,
+  },
+  warningTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFB74D',
+    marginBottom: 8,
+  },
+  warningText: {
+    fontSize: 14,
+    color: '#FFE0B2',
+    lineHeight: 20,
   },
 });

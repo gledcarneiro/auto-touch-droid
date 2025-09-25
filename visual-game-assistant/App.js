@@ -1,14 +1,14 @@
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import MainScreen from './src/screens/MainScreen';
+import NativeOverlay from './src/components/NativeOverlay';
 
 export default function App() {
   return (
     <SafeAreaProvider>
       <View style={styles.container}>
         <StatusBar style="auto" />
-        <MainScreen />
+        <NativeOverlay />
       </View>
     </SafeAreaProvider>
   );
