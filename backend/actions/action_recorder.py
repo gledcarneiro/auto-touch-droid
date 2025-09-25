@@ -11,7 +11,7 @@ import re
 import json # Importar json para salvar a lista de forma estruturada
 
 # Reutilizando a função de captura de toque e outras utilidades
-from adb_utils import simulate_touch, get_touch_event_coordinates
+from ..core.adb_utils import simulate_touch, get_touch_event_coordinates
 
 # --- Configurações do Dispositivo (devem ser consistentes em todos os scripts que usam getevent) ---
 # Ajuste estes valores de acordo com a resolução do seu dispositivo e o range de getevent

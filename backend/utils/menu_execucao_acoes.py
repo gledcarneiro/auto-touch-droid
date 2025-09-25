@@ -13,11 +13,11 @@ import time # Importar time para o delay entre contas
 import json # Importar json para carregar a sequência original
 
 # Importa a função de execução de ações principal e a função de execução por conta
-from action_executor import execultar_acoes, execute_login_for_account # Importa execultar_acoes E a nova função
+from ..core.action_executor import execultar_acoes, execute_login_for_account
 
 # Importa a lista de contas do arquivo de configuração
 try:
-    from accounts_config import accounts # Assumindo que você salvou a célula 4879a44f como accounts_config.py
+    from ..config.accounts_config import accounts
     print("Lista 'accounts' importada de accounts_config.py")
 except ImportError:
     print("Erro: Não foi possível importar a lista 'accounts' de accounts_config.py.")
@@ -29,7 +29,7 @@ except ImportError:
 # Substitua 'RXCTB03EXVK' pelo ID do seu dispositivo Android, se for diferente.
 device_id_execution = 'RXCTB03EXVK'
 
-acoes_folder = "acoes"
+acoes_folder = os.path.join(os.path.dirname(__file__), "..", "actions", "templates")
 login_action_name = "fazer_login" # Nome da ação de login
 logout_action_name = "fazer_logout" # Nome da ação de logout
 pegar_bau_action_name = "pegar_bau" # Nome da ação pegar_bau

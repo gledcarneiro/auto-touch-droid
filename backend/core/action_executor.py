@@ -16,12 +16,9 @@ import json
 import re
 import subprocess # Importar subprocess explicitamente
 
-# Assumindo que você tem adb_utils.py e image_detection.py acessíveis
-# Importe as funções necessárias
-from adb_utils import capture_screen, simulate_touch
-
-# Importando find_image_on_screen diretamente, pois find_and_optionally_click a utiliza
-from image_detection import find_image_on_screen
+# Importando funções dos módulos do backend
+from .adb_utils import capture_screen, simulate_touch
+from .image_detection import find_image_on_screen
 
 
 def simulate_scroll(device_id=None, direction="up", duration_ms=500, start_coords=None, end_coords=None):

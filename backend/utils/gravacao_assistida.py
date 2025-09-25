@@ -6,7 +6,7 @@
 # -----------------------------------------------------------------------------
 
 # Importa a função de gravação assistida do script create_action_template.py
-from create_action_template import record_action_sequence_assisted
+from ..actions.create_action_template import record_action_sequence_assisted
 
 # Configurações
 # Substitua 'RXCTB03EXVK' pelo ID do seu dispositivo Android, se for diferente.

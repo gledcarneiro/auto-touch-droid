@@ -2,7 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 class ActionService {
   constructor() {
-    this.baseUrl = 'http://localhost:8000'; // Servidor Python local
+    this.baseUrl = 'http://localhost:8080'; // Servidor Python local
     this.actions = [];
   }
 
@@ -127,13 +127,16 @@ class ActionService {
   // Verificar status do servidor Python
   async checkServerStatus() {
     try {
+      console.log('🌐 Tentando conectar com:', `${this.baseUrl}/status`);
       const response = await fetch(`${this.baseUrl}/status`, {
         method: 'GET',
         timeout: 3000,
       });
 
+      console.log('📡 Resposta do servidor:', response.status, response.ok);
       return response.ok;
     } catch (error) {
+      console.error('❌ Erro ao conectar com servidor:', error.message);
       return false;
     }
   }

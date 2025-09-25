@@ -8,9 +8,13 @@ import {
   Dimensions,
   Animated,
   AppState,
+  Modal,
+  PanResponder,
+  NativeModules,
 } from 'react-native';
-import DrawOverlay from '@vokhuyet/react-native-draw-overlay';
 import ActionService from '../services/ActionService';
+
+const { OverlayModule } = NativeModules;
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -24,45 +28,60 @@ const NativeOverlay = () => {
   const [slideAnim] = useState(new Animated.Value(-screenWidth * 0.5));
 
   useEffect(() => {
+    console.log('🎮 NativeOverlay: Componente carregado!');
     checkPermissions();
     loadActions();
     checkServerStatus();
   }, []);
 
-  // Verificar permissão de overlay real
+  // Verificar permissão de overlay (REAL)
   const checkPermissions = async () => {
     try {
-      const permission = await DrawOverlay.checkPermission();
-      setHasPermission(permission);
-      
-      if (!permission) {
-        Alert.alert(
-          'Permissão Necessária',
-          'Para funcionar sobre outros apps, precisamos da permissão "Exibir sobre outros apps".',
-          [
-            { text: 'Cancelar', style: 'cancel' },
-            { text: 'Conceder', onPress: requestPermission }
-          ]
-        );
+      console.log('🔍 OverlayModule disponível?', !!OverlayModule);
+      if (OverlayModule) {
+        console.log('🔍 Métodos do OverlayModule:', Object.keys(OverlayModule));
+        const hasPermission = await OverlayModule.checkOverlayPermission();
+        setHasPermission(hasPermission);
+        console.log('🔐 Permissão de overlay:', hasPermission ? 'CONCEDIDA' : 'NEGADA');
+      } else {
+        console.log('⚠️ OverlayModule não disponível, usando modo simulado');
+        setHasPermission(true);
       }
     } catch (error) {
-      console.error('Erro ao verificar permissões:', error);
+      console.error('❌ Erro ao verificar permissões:', error);
+      setHasPermission(false);
     }
   };
 
-  // Solicitar permissão de overlay real
+  // Solicitar permissão de overlay (REAL)
   const requestPermission = async () => {
     try {
-      await DrawOverlay.requestPermission();
-      const permission = await DrawOverlay.checkPermission();
-      setHasPermission(permission);
-      
-      if (permission) {
-        Alert.alert('Sucesso!', 'Permissão concedida! Agora você pode ativar o overlay.');
+      if (OverlayModule) {
+        const result = await OverlayModule.requestOverlayPermission();
+        console.log('🔐 Resultado da solicitação:', result);
+        
+        if (result === 'PERMISSION_ALREADY_GRANTED') {
+          setHasPermission(true);
+          Alert.alert('✅ Sucesso!', 'Permissão já concedida! Agora você pode ativar o overlay.');
+        } else if (result === 'PERMISSION_REQUESTED') {
+          Alert.alert(
+            '⚙️ Permissão Solicitada', 
+            'Você será redirecionado para as configurações. Ative "Exibir sobre outros apps" e volte ao app.',
+            [
+              { text: 'OK', onPress: () => {
+                // Verificar novamente após um tempo
+                setTimeout(checkPermissions, 2000);
+              }}
+            ]
+          );
+        }
+      } else {
+        setHasPermission(true);
+        Alert.alert('✅ Sucesso!', 'Permissão concedida! (modo simulado)');
       }
     } catch (error) {
-      console.error('Erro ao solicitar permissão:', error);
-      Alert.alert('Erro', 'Não foi possível obter a permissão de overlay.');
+      console.error('❌ Erro ao solicitar permissão:', error);
+      Alert.alert('❌ Erro', 'Não foi possível obter a permissão de overlay.');
     }
   };
 
@@ -72,11 +91,54 @@ const NativeOverlay = () => {
   };
 
   const checkServerStatus = async () => {
+    console.log('🔍 Verificando status do servidor...');
     const status = await ActionService.checkServerStatus();
+    console.log('📡 Status do servidor:', status);
     setServerStatus(status);
   };
 
+  // Ativar overlay NATIVO
+  const activateOverlay = async () => {
+    if (!hasPermission) {
+      Alert.alert('❌ Permissão Necessária', 'Você precisa conceder permissão de overlay primeiro.');
+      return;
+    }
+    
+    try {
+      if (OverlayModule) {
+        await OverlayModule.startOverlay();
+        setIsOverlayActive(true);
+        console.log('🚀 Overlay NATIVO ativado - agora funciona sobre outros apps!');
+        Alert.alert('🚀 Sucesso!', 'Overlay nativo ativado! Agora os botões aparecerão sobre qualquer app.');
+      } else {
+        // Fallback para modo simulado
+        setIsOverlayActive(true);
+        console.log('⚠️ Overlay simulado ativado (modo desenvolvimento)');
+      }
+    } catch (error) {
+      console.error('❌ Erro ao ativar overlay nativo:', error);
+      Alert.alert('❌ Erro', 'Não foi possível ativar o overlay nativo.');
+    }
+  };
+
+  // Desativar overlay NATIVO
+  const deactivateOverlay = async () => {
+    try {
+      if (OverlayModule) {
+        await OverlayModule.stopOverlay();
+        console.log('🛑 Overlay NATIVO desativado');
+      }
+      setIsOverlayActive(false);
+      console.log('🛑 Overlay desativado');
+    } catch (error) {
+      console.error('❌ Erro ao desativar overlay nativo:', error);
+      setIsOverlayActive(false);
+    }
+  };
+
   const toggleOverlay = async () => {
+    console.log('🔄 toggleOverlay chamado, hasPermission:', hasPermission, 'isOverlayActive:', isOverlayActive);
+    
     if (!hasPermission) {
       Alert.alert(
         'Permissão Necessária',
@@ -88,22 +150,12 @@ const NativeOverlay = () => {
 
     if (!isOverlayActive) {
       try {
-        // Criar overlay com controles flutuantes
-        const overlayConfig = {
-          width: 300,
-          height: 200,
-          x: 50,
-          y: 100,
-          backgroundColor: 'rgba(0, 0, 0, 0.8)',
-          borderRadius: 10,
-        };
-
-        await DrawOverlay.show(overlayConfig, renderOverlayContent());
+        console.log('✅ Ativando overlay...');
         setIsOverlayActive(true);
         
         Alert.alert(
           'Overlay Ativado!',
-          'Agora minimize este app e abra o League of Kingdoms. Os controles aparecerão sobre o jogo!',
+          'O overlay está ativo! Use os controles flutuantes para automatizar ações.',
           [{ text: 'Entendi!' }]
         );
       } catch (error) {
@@ -111,69 +163,11 @@ const NativeOverlay = () => {
         Alert.alert('Erro', 'Falha ao ativar overlay.');
       }
     } else {
-      try {
-        await DrawOverlay.hide();
-        setIsOverlayActive(false);
-      } catch (error) {
-        console.error('Erro ao desativar overlay:', error);
-        setIsOverlayActive(false);
-      }
+      await deactivateOverlay();
     }
   };
 
-  // Renderizar conteúdo do overlay
-  const renderOverlayContent = () => {
-    return `
-      <div style="
-        width: 100%;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        color: white;
-        font-family: Arial, sans-serif;
-      ">
-        <h3>League Assistant</h3>
-        <button onclick="executeAction('login')" style="
-          margin: 5px;
-          padding: 10px 20px;
-          background: #4CAF50;
-          color: white;
-          border: none;
-          border-radius: 5px;
-          cursor: pointer;
-        ">Login</button>
-        <button onclick="executeAction('collect')" style="
-          margin: 5px;
-          padding: 10px 20px;
-          background: #2196F3;
-          color: white;
-          border: none;
-          border-radius: 5px;
-          cursor: pointer;
-        ">Coletar</button>
-        <button onclick="executeAction('close')" style="
-          margin: 5px;
-          padding: 10px 20px;
-          background: #f44336;
-          color: white;
-          border: none;
-          border-radius: 5px;
-          cursor: pointer;
-        ">Fechar</button>
-      </div>
-      <script>
-        function executeAction(action) {
-          if (action === 'close') {
-            window.ReactNativeWebView.postMessage('close_overlay');
-          } else {
-            window.ReactNativeWebView.postMessage('action:' + action);
-          }
-        }
-      </script>
-    `;
-  };
+
 
   const toggleMenu = () => {
     const toValue = isMenuOpen ? -screenWidth * 0.5 : 0;

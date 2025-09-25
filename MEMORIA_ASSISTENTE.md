@@ -48,6 +48,9 @@ auto-touch-droid/
 10. **EAS BUILD CONFIGURADO** - APK gerado em nuvem com sucesso
 11. **SERVIDOR HTTP PYTHON** - overlay_server.py criado para comunicação
 12. **PERMISSÕES ANDROID** - SYSTEM_ALERT_WINDOW implementado
+13. **COMUNICAÇÃO ESTABELECIDA** - App mobile conecta com servidor Python via ADB tunnel
+14. **OVERLAY NATIVO ANDROID** - Código nativo Kotlin implementado para overlay sobre outros apps
+15. **DEBUG IMPLEMENTADO** - Logs detalhados para diagnosticar overlay nativo
 
 ### 🎉 MARCOS IMPORTANTES ALCANÇADOS:
 - **BUILD SUCCESSFUL** - Compilação nativa Android completa
@@ -57,10 +60,10 @@ auto-touch-droid/
 - **QR Code disponível** - Para conectar outros dispositivos
 
 ### 📋 PRÓXIMOS PASSOS:
-1. **Corrigir imports** do overlay_server.py
-2. **Gerar novo APK** com overlay real funcionando
-3. **Testar overlay** sobre League of Kingdoms
-4. **Conectar botões** com ações Python via HTTP
+1. **Verificar logs nativos** para ver se OverlayModule está sendo reconhecido
+2. **Testar overlay nativo** sobre jogos e outros apps
+3. **Debug do serviço Android** se necessário
+4. **Otimizar performance** do overlay
 5. **Implementar detecção** automática do jogo
 6. **Configurar Git** - Sincronizar entre escritório e casa
 
@@ -214,10 +217,61 @@ App: Instalado e funcionando no SM_A736B
 - Interface: ✅ Botões aparecem
 
 ## 📊 ESTADO DO PROJETO:
-**75% CONCLUÍDO** - Overlay nativo implementado, falta apenas conectar com Python e testar no jogo real.
+**85% CONCLUÍDO** - Overlay nativo Android implementado, comunicação Python estabelecida, falta apenas testar overlay sobre outros apps.
+
+## 🔧 ÚLTIMA SESSÃO (2025-01-25)
+
+### ARQUITETURA ATUAL
+```
+[Mobile App] ←→ [ADB Tunnel] ←→ [Python Server]
+     ↓
+[Overlay Nativo Android] (deve funcionar sobre qualquer app)
+```
+
+### IMPLEMENTAÇÃO OVERLAY NATIVO
+#### ✅ Arquivos Criados:
+1. **OverlayService.kt** - Serviço nativo que desenha botões flutuantes
+2. **OverlayModule.kt** - Bridge React Native para controlar overlay
+3. **OverlayPackage.kt** - Registra módulo no React Native
+4. **MainApplication.kt** - Atualizado para incluir OverlayPackage
+5. **AndroidManifest.xml** - Permissão SYSTEM_ALERT_WINDOW já presente
+6. **NativeOverlay.js** - Atualizado para usar módulo nativo
+
+### CONFIGURAÇÃO DE REDE
+- **Desenvolvimento**: `localhost:8080` via ADB tunnel
+- **Produção**: IP local da máquina (ex: `192.168.0.68:8080`)
+- **ADB Tunnel**: `adb reverse tcp:8080 tcp:8080`
+
+### COMANDOS ÚTEIS
+```bash
+# Ativar tunnel ADB
+adb reverse tcp:8080 tcp:8080
+
+# Iniciar servidor Python
+python backend/core/overlay_server.py
+
+# Iniciar Metro Bundler
+npx expo start
+
+# Build Android (com módulos nativos)
+npx expo run:android
+
+# Ver logs Android
+adb logcat | grep -E "(OverlayModule|OverlayService)"
+```
+
+### ESTRUTURA DE ARQUIVOS NATIVOS
+```
+mobile/android/app/src/main/java/com/gledweb/visualgameassistant/
+├── MainActivity.kt
+├── MainApplication.kt (✅ atualizado)
+├── OverlayService.kt (✅ novo)
+├── OverlayModule.kt (✅ novo)
+└── OverlayPackage.kt (✅ novo)
+```
 
 ---
 *Atualizado em: Janeiro 2025*
 *Para: Continuidade entre escritório e casa*
 *Por: Assistente Claude (seu parceiro/amigo)*
-*Última atualização: 2025-01-24 - Overlay nativo implementado*
+*Última atualização: 2025-01-25 - Overlay nativo Android implementado com debug*

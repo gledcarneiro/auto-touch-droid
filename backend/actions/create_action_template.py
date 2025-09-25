@@ -14,9 +14,9 @@ import json # Importar json para lidar com arquivos de sequência
 import numpy as np # Importar numpy para operações com imagens
 
 # --- Funções auxiliares ---
-# Assumindo que adb_utils.py e action_executor.py estão acessíveis para importar
-from adb_utils import simulate_touch, get_touch_event_coordinates, capture_screen
-# from action_executor import find_and_confirm_click # Removido temporariamente se a lógica for separada
+# Importando funções dos módulos do backend
+from ..core.adb_utils import simulate_touch, get_touch_event_coordinates, capture_screen
+# from ..core.action_executor import find_and_confirm_click # Removido temporariamente se a lógica for separada
 
 # --- Configurações do Dispositivo ---
 # Mantenho as configurações de getevent aqui por referência, embora não afetem diretamente a gravação de templates ou JSON

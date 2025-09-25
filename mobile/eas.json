@@ -10,6 +10,13 @@
         "buildType": "apk"
       }
     },
+    "local-dev": {
+      "distribution": "internal",
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleDebug"
+      }
+    },
     "preview": {
       "distribution": "internal",
       "android": {

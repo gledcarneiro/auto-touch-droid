@@ -6,7 +6,7 @@
 # -----------------------------------------------------------------------------
 
 # Importa a função de execução de ações
-from action_executor import execultar_acoes
+from ..core.action_executor import execultar_acoes
 
 # Configurações
 # Substitua 'RXCTB03EXVK' pelo ID do seu dispositivo Android, se for diferente.

@@ -1,0 +1,13 @@
+# Auto Touch Droid - Python Dependencies
+# Backend dependencies for image detection, ADB automation, and overlay server
+
+# Computer Vision and Image Processing
+opencv-python==4.8.1.78
+numpy==1.24.3
+
+# Additional utilities that might be needed
+pillow==10.0.1
+
+# Development and testing (optional)
+# pytest==7.4.2
+# black==23.7.0
