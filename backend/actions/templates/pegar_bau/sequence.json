@@ -1,8 +1,8 @@
 [
     {
-        "name": "Passo 1: Template template_step_01.png",
+        "name": "Passo 1: Template 01_bau.png",
         "type": "template",
-        "template_file": "template_step_01.png",
+        "template_file": "01_bau.png",
         "action_on_found": "click",
         "click_delay": 0.5,
         "action_before_find": null,
@@ -12,9 +12,9 @@
         "initial_delay": 2.0
     },
     {
-        "name": "Passo 2: Template template_step_02.png",
+        "name": "Passo 2: Template 02_gratis.png",
         "type": "template",
-        "template_file": "template_step_02.png",
+        "template_file": "02_gratis.png",
         "action_on_found": "click",
         "click_delay": 0.5,
         "action_before_find": null,
@@ -24,9 +24,9 @@
         "initial_delay": 2.0
     },
     {
-        "name": "Passo 3: Template template_step_03.png",
+        "name": "Passo 3: Template 03_confirmar.png",
         "type": "template",
-        "template_file": "template_step_03.png",
+        "template_file": "03_confirmar.png",
         "action_on_found": "click",
         "click_delay": 0.5,
         "action_before_find": null,
@@ -36,9 +36,9 @@
         "initial_delay": 2.0
     },
     {
-        "name": "Passo 4: Template template_step_04.png",
+        "name": "Passo 4: Template 04_voltar.png",
         "type": "template",
-        "template_file": "template_step_04.png",
+        "template_file": "04_voltar.png",
         "action_on_found": "click",
         "click_delay": 0.5,
         "action_before_find": null,

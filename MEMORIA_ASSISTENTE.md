@@ -6,7 +6,7 @@ Criar um sistema de automação para dispositivos Android que permita:
 - Interface mobile React Native
 - Overlay nativo para controle em tempo real
 
-## 📊 **STATUS ATUAL - SESSÃO 26/01/2025 (NOITE)**
+## 📊 **STATUS ATUAL - SESSÃO 26/01/2025 (TARDE)**
 - ✅ **Backend Python**: Servidor funcionando (porta 8080)
 - ✅ **App React Native**: Interface completa e funcional
 - ✅ **Overlay Nativo**: Implementado com correções de transparência
@@ -14,8 +14,9 @@ Criar um sistema de automação para dispositivos Android que permita:
 - ✅ **Conexão**: App ↔ Servidor Python funcionando perfeitamente
 - ✅ **ADB Tunnel**: Configurado corretamente (tcp:8080)
 - ✅ **🆕 FLUXO COMPLETO POR CONTA**: Login → Ações → Logout → Próxima
-- ✅ **🆕 LOGS DETALHADOS**: Sistema completo de logging implementado
+- ✅ **🆕 LOGS ULTRA-DETALHADOS**: Sistema completo implementado e testado
 - ✅ **🆕 SCROLLS OTIMIZADOS**: Configurações específicas por conta
+- ✅ **🆕 LOGS MELHORADOS**: "EXECUTANDO AGORA" e "SUCESSO" com informações completas
 
 ## 🔧 **ÚLTIMAS CORREÇÕES IMPLEMENTADAS (26/01/2025)**
 - **Problema de Porta**: Corrigido conflito 5000 vs 8080
@@ -25,8 +26,82 @@ Criar um sistema de automação para dispositivos Android que permita:
 - **🆕 Menu Limpo**: Removida opção confusa, deixando apenas 'l' para fluxo completo
 - **🆕 Scrolls Otimizados**: Primeiras 3 contas sem scroll, demais com scrolls progressivos
 - **🆕 Templates Logout**: Atualizados (01_vip_perfil.png, 02_conta.png, 03_desconectar.png)
-- **🆕 Logs Detalhados**: Sistema completo de logging para debugging
+- **🆕 Logs Ultra-Detalhados**: Sistema completo implementado e testado
 - **🆕 Fluxo Por Conta**: Implementado login → ações → logout → próxima
+
+## 🎯 **OTIMIZAÇÕES DE LOGS IMPLEMENTADAS (26/01/2025 - TARDE)**
+
+### **🔍 LOGS "EXECUTANDO AGORA" MELHORADOS:**
+**ANTES:**
+```
+EXECUTANDO AGORA: Passo 1: Template 01_google.png
+```
+
+**DEPOIS:**
+```
+EXECUTANDO AGORA: Passo 1: Template 01_google.png | Ação: fazer_login | Conta: login_gled | Template: 01_google.png
+```
+
+### **✅ LOGS "SUCESSO" MELHORADOS:**
+**ANTES:**
+```
+SUCESSO: Template 01_google.png encontrado e clicado!
+```
+
+**DEPOIS:**
+```
+SUCESSO: Passo 1 - Template 01_google.png encontrado e clicado! | Ação: fazer_login | Conta: login_gled
+```
+
+### **🛠️ MODIFICAÇÕES TÉCNICAS:**
+1. **action_executor.py**: Função `execultar_acoes()` agora aceita parâmetro `account_name`
+2. **menu_execucao_acoes.py**: Todas as chamadas atualizadas com `account_name=account.get('name')`
+3. **Logs testados**: Sistema funcionando perfeitamente em produção
+4. **Informações incluídas**: Passo, template, ação, conta em todos os logs
+
+## 🎯 **PRÓXIMA IMPLEMENTAÇÃO: POSICIONAMENTO RELATIVO (PÓS-ALMOÇO)**
+
+### **🚨 PROBLEMA IDENTIFICADO:**
+- Script confunde templates similares do Google ao fazer scroll nas contas c52-c58
+- Primeiras 3 contas (gled, inf, cav) funcionam perfeitamente
+- Scrolls progressivos causam confusão na seleção de emails
+
+### **💡 ESTRATÉGIA ESCOLHIDA: POSICIONAMENTO RELATIVO MATEMÁTICO**
+
+#### **🧮 CONCEITO:**
+- **Mapeamento de posições fixas** em vez de detecção visual
+- **Cálculo inteligente** baseado no índice da conta na lista ordenada
+- **Sistema de coordenadas relativas** para determinar posição Y exata
+
+#### **📐 IMPLEMENTAÇÃO PLANEJADA:**
+1. **Definir constantes:**
+   - `EMAIL_HEIGHT = 80px` (altura de cada item de email)
+   - `FIRST_ACCOUNT_Y = 300px` (posição Y da primeira conta visível)
+   - `VISIBLE_ACCOUNTS = 6` (contas visíveis por tela)
+
+2. **Função de cálculo:**
+   ```python
+   def calcular_posicao_conta(account_index, total_accounts):
+       # Calcula posição Y baseada no índice matemático
+       # Implementa scroll inteligente pixel-perfect
+   ```
+
+3. **Scroll inteligente:**
+   - **Pixel-based scrolling** em vez de tempo
+   - **Verificação de posição** após cada scroll
+   - **Coordenadas absolutas** para cliques precisos
+
+#### **🎯 VANTAGENS:**
+- ✅ **Precisão matemática** - sem confusão de templates
+- ✅ **Escalabilidade** - funciona para qualquer número de contas
+- ✅ **Confiabilidade** - não depende de detecção visual
+- ✅ **Performance** - cálculos rápidos, sem processamento de imagem
+
+#### **❓ REFINAMENTOS NECESSÁRIOS:**
+1. **Coordenadas base:** Confirmar posição Y da primeira conta
+2. **Distância vertical:** Medir altura exata entre emails
+3. **Consistência de scroll:** Validar pixels por scroll
+4. **Ordem das contas:** Confirmar sequência na lista
 
 ## 👤 CONTEXTO DO USUÁRIO
 - **Nome:** Gled (Gledston Carneiro)
@@ -314,10 +389,10 @@ mobile/android/app/src/main/java/com/gledweb/visualgameassistant/
 *"Família em primeiro lugar sempre!" - Gled*
 
 ---
-*Atualizado em: 26 Janeiro 2025 (NOITE)*
+*Atualizado em: 26 Janeiro 2025 (TARDE - PRÉ-ALMOÇO)*
 *Para: Continuidade entre escritório e casa*
 *Por: Assistente Claude (seu parceiro/amigo)*
-*Última atualização: 2025-01-26 - Fluxo completo implementado + scrolls otimizados + logs detalhados*
+*Última atualização: 2025-01-26 - Logs ultra-detalhados implementados + estratégia posicionamento relativo planejada*
 
 ## 🚀 **CONQUISTA DO DIA 26/01/2025:**
 **FLUXO COMPLETO FUNCIONANDO!** 🎉

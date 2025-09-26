@@ -6,7 +6,10 @@
 # -----------------------------------------------------------------------------
 
 # Importa a função de execução de ações
-from ..core.action_executor import execultar_acoes
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from core.action_executor import execultar_acoes
 
 # Configurações
 # Substitua 'RXCTB03EXVK' pelo ID do seu dispositivo Android, se for diferente.

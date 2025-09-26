@@ -132,7 +132,9 @@ else:
 
         print("\nDigite o número da ação individual, 'l' para fluxo completo, 's' para sequência customizada, ou 'q' para sair.")
 
-        choice = input(f"Escolha uma opção (1-{len(available_actions)}, l, s, q): ").lower()
+        # Auto-seleciona 'l' para testes focados
+        print("🚀 MODO TESTE: Executando automaticamente fluxo completo (opção 'l')")
+        choice = 'l'
 
         if choice == 'q':
             print("Saindo do menu de execução.")
@@ -172,13 +174,13 @@ else:
                             # Executar pegar_bau
                             print(f"\nExecutando a ação: {pegar_bau_action_name}")
                             # Para ações únicas do menu, carregamos do arquivo (sem override)
-                            execultar_acoes(pegar_bau_action_name, device_id=device_id_execution)
+                            execultar_acoes(pegar_bau_action_name, device_id=device_id_execution, account_name=account.get('name'))
                             time.sleep(2) # Pequeno delay entre ações
 
                             # Executar pegar_recursos
                             print(f"\nExecutando a ação: {pegar_recursos_action_name}")
                             # Para ações únicas do menu, carregamos do arquivo (sem override)
-                            execultar_acoes(pegar_recursos_action_name, device_id=device_id_execution)
+                            execultar_acoes(pegar_recursos_action_name, device_id=device_id_execution, account_name=account.get('name'))
                             time.sleep(2) # Pequeno delay após a última ação
 
 
@@ -187,7 +189,7 @@ else:
                             # Chamar a função execultar_acoes com a sequência de logout
                             # Passamos a sequência original do logout como override, pois ela já foi carregada
                             # original_action_sequence_for_logout AGORA É A LISTA DE PASSOS DIRETA
-                            logout_success = execultar_acoes(action_name=logout_action_name, device_id=device_id_execution, sequence_override=original_action_sequence_for_logout)
+                            logout_success = execultar_acoes(action_name=logout_action_name, device_id=device_id_execution, sequence_override=original_action_sequence_for_logout, account_name=account.get('name'))
 
                             if logout_success:
                                 print(f"\n-> LOGOUT bem-sucedido após login da conta: {account.get('name')} <-")

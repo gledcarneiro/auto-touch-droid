@@ -17,8 +17,12 @@ import re
 import subprocess # Importar subprocess explicitamente
 
 # Importando funções dos módulos do backend
-from adb_utils import capture_screen, simulate_touch
-from image_detection import find_image_on_screen
+try:
+    from .adb_utils import capture_screen, simulate_touch
+    from .image_detection import find_image_on_screen
+except ImportError:
+    from adb_utils import capture_screen, simulate_touch
+    from image_detection import find_image_on_screen
 
 
 def simulate_scroll(device_id=None, direction="up", duration_ms=500, start_coords=None, end_coords=None):
@@ -77,8 +81,7 @@ def simulate_scroll(device_id=None, direction="up", duration_ms=500, start_coord
         # print(f"DEBUG simulate_scroll stdout: {result.stdout.strip()}") # Comentado para evitar muita verbosidade
         # print(f"DEBUG simulate_scroll stderr: {result.stderr.strip()}") # Comentado para evitar muita verbosidade
 
-        # Adicionar um pequeno delay após o scroll para a tela se estabilizar
-        time.sleep(duration_ms / 1000.0 + 0.5) # Espera a duração do swipe + 0.5s
+        # Delay removido - já controlado por delay_after_scroll no sequence.json
     except subprocess.TimeoutExpired as e:
          print(f"Erro de timeout ao simular o scroll: {e.cmd}")
     except subprocess.CalledProcessError as e:
@@ -188,7 +191,7 @@ def find_and_optionally_click(template_path, device_id=None, screenshot_path="te
         return (False, None) # Retorna False se o template não foi encontrado após todas as tentativas
 
 
-def execultar_acoes(action_name, device_id=None, sequence_override=None):
+def execultar_acoes(action_name, device_id=None, sequence_override=None, account_name=None):
     """
     Executa uma sequência de ações lidas de um arquivo sequence.json
     na pasta da ação, onde cada item no JSON define um passo
@@ -200,6 +203,7 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None):
         sequence_override (list, optional): Uma lista de dicionários de passos para executar
                                            em vez de carregar do arquivo sequence.json.
                                            Útil para sequências dinâmicas (como login por conta).
+        account_name (str, optional): O nome da conta sendo executada (para logs melhorados).
 
     Returns:
         bool: True se a execução da ação foi considerada bem-sucedida (terminou sem erros críticos
@@ -312,14 +316,15 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None):
         step_name = step_config.get("name", f"Passo {step_number}") # Usar nome do JSON ou default
 
         print(f"\n🎯 PASSO {step_number}/{len(action_sequence)}: {step_name}")
-        print(f"📋 Configuração: {step_config}")
-        print("⏳ Aguarde... preparando para executar este passo...")
         
-        # Delay para observação
-        import time
-        time.sleep(2)  # 2 segundos para você observar
+        # Criar log melhorado com informações de ação e conta
+        account_info = f" - Conta: {account_name}" if account_name else ""
+        template_info = ""
+        if step_config.get("type") == "template":
+            template_filename = step_config.get("template_file", "N/A")
+            template_info = f" - Template: {template_filename}"
         
-        print(f"▶️  EXECUTANDO AGORA: {step_name}")
+        print(f"▶️  EXECUTANDO AGORA: [Passo {step_number}]{template_info} - Acao: {action_name}{account_info}")
         print("-" * 40)
 
         step_type = step_config.get("type")
@@ -388,7 +393,6 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None):
 
             # --- Tentar encontrar o template ---
             print(f"🔍 PROCURANDO TEMPLATE: {template_filename}")
-            print(f"📁 Caminho completo: {template_path}")
             print(f"🎯 Ação ao encontrar: {action_on_found}")
             print(f"🔄 Máximo de tentativas: {max_attempts}")
             print(f"⏱️  Delay entre tentativas: {attempt_delay}s")
@@ -431,8 +435,59 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None):
                     if click_delay > 0:
                          print(f"⏳ Aguardando {click_delay}s após o clique...")
                          time.sleep(click_delay)
-                    print(f"🎉 SUCESSO: {step_name} ({os.path.basename(template_path)}) - Template encontrado e clicado!")
+                    # Log de sucesso melhorado
+                    account_info = f" - Conta: {account_name}" if account_name else ""
+                    print(f"🎉 SUCESSO [Passo {step_number}] - Template: {os.path.basename(template_path)} - Acao: {action_name}{account_info}")
                     step_success = True # Passo de template/click bem-sucedido
+                
+                elif action_on_found == "scroll_then_click":
+                    # PRIMEIRO executa o scroll, DEPOIS clica
+                    print(f"🔄 EXECUTANDO: Scroll primeiro, depois clique")
+                    
+                    # Executar action_after_find ANTES do clique
+                    action_after = step_config.get("action_after_find")
+                    if action_after and isinstance(action_after, dict):
+                        after_type = action_after.get("type")
+                        if after_type == "scroll":
+                            scroll_direction = action_after.get("direction", "down")
+                            scroll_duration = action_after.get("duration_ms", 500)
+                            delay_after_scroll_after = action_after.get("delay_after_scroll", 0.5)
+                            scroll_start_coords = action_after.get("start_coords")
+                            scroll_end_coords = action_after.get("end_coords")
+
+                            print(f"📜 PRIMEIRO: Executando scroll {scroll_direction} por {scroll_duration}ms")
+                            simulate_scroll(
+                                device_id=device_id,
+                                direction=scroll_direction,
+                                duration_ms=scroll_duration,
+                                start_coords=scroll_start_coords,
+                                end_coords=scroll_end_coords
+                            )
+                            print(f"⏳ Aguardando {delay_after_scroll_after}s após o scroll...")
+                            time.sleep(delay_after_scroll_after)
+                    
+                    # AGORA executa o clique
+                    center_x, center_y = coords
+                    if isinstance(click_offset, list) and len(click_offset) == 2:
+                         final_click_x = center_x + click_offset[0]
+                         final_click_y = center_y + click_offset[1]
+                         print(f"🎯 Aplicando offset [{click_offset[0]}, {click_offset[1]}]")
+                         print(f"👆 SEGUNDO: CLICANDO EM: ({final_click_x}, {final_click_y})")
+                         simulate_touch(final_click_x, final_click_y, device_id=device_id)
+                    else:
+                         if "click_offset" in step_config:
+                              print(f"⚠️  Aviso: Configuração de click_offset inválida ({click_offset}) em {step_name}. Esperado [x, y].")
+                         print(f"👆 SEGUNDO: CLICANDO NO CENTRO: ({center_x}, {center_y})")
+                         simulate_touch(center_x, center_y, device_id=device_id)
+
+                    if click_delay > 0:
+                         print(f"⏳ Aguardando {click_delay}s após o clique...")
+                         time.sleep(click_delay)
+                    # Log de sucesso melhorado para scroll_then_click
+                    account_info = f" - Conta: {account_name}" if account_name else ""
+                    print(f"🎉 SUCESSO [Passo {step_number}] - Template: {os.path.basename(template_path)} - Acao: {action_name}{account_info}")
+                    step_success = True
+                    # Não executar action_after_find novamente, pois já foi executado
                 # TODO: Adicionar outros tipos de action_on_found aqui (ex: swipe a partir do template)
                 else:
                     # Ignora chaves que começam com '#'
@@ -445,12 +500,16 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None):
                 print(f"🔍 Arquivo procurado: {os.path.basename(template_path)}")
                 print(f"🔄 Tentativas realizadas: {max_attempts}")
                 print(f"⚠️  PASSO FALHOU: {step_name}")
+                print(f"🛑 PARANDO EXECUÇÃO PARA ANÁLISE DO PROBLEMA...")
                 step_success = False # Passo de template falhou
+                return False  # Para a execução imediatamente
 
 
             # --- Processar action_after_find ---
-            action_after = step_config.get("action_after_find")
-            if action_after and isinstance(action_after, dict):
+            # Não executar se já foi processado no scroll_then_click
+            if action_on_found != "scroll_then_click":
+                action_after = step_config.get("action_after_find")
+                if action_after and isinstance(action_after, dict):
                  after_type = action_after.get("type")
                  if after_type == "scroll":
                       scroll_direction = action_after.get("direction", "down")
@@ -507,6 +566,30 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None):
                   step_success = False
 
 
+        elif step_type == "scroll":
+             # Implementar lógica para scroll direto
+             scroll_direction = step_config.get("direction", "up")
+             scroll_duration = step_config.get("duration_ms", 500)
+             delay_after_scroll = step_config.get("delay_after_scroll", 0.5)
+             scroll_start_coords = step_config.get("start_coords")
+             scroll_end_coords = step_config.get("end_coords")
+             
+             print(f"🔄 Executando {step_name}: Scroll {scroll_direction} por {scroll_duration}ms")
+             simulate_scroll(
+                 device_id=device_id,
+                 direction=scroll_direction,
+                 duration_ms=scroll_duration,
+                 start_coords=scroll_start_coords,
+                 end_coords=scroll_end_coords
+             )
+             
+             if delay_after_scroll > 0:
+                 print(f"⏳ Aguardando {delay_after_scroll}s após o scroll...")
+                 time.sleep(delay_after_scroll)
+             
+             print(f"✅ {step_name} concluído com sucesso.")
+             step_success = True
+
         elif step_type == "wait":
              # Implementar lógica para esperar um tempo fixo
              wait_time = step_config.get("duration_seconds")
@@ -554,8 +637,14 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None):
             print(f"💡 Verifique se o template existe e está visível na tela!")
         
         print("=" * 50)
-        print("⏳ Aguardando 3 segundos antes do próximo passo...")
-        time.sleep(3)  # Pausa entre passos para observação
+        
+        # Delay condicional: menor para pegar_recursos (recursos já visíveis após scroll)
+        if action_name == "pegar_recursos":
+            print("⏳ Aguardando 0.5 segundos antes do próximo passo...")
+            time.sleep(0.5)  # Delay reduzido para recursos já visíveis
+        else:
+            print("⏳ Aguardando 3 segundos antes do próximo passo...")
+            time.sleep(3)  # Pausa padrão entre passos para observação
         
         # REMOVENDO VERIFICAÇÃO DE SUCESSO DAQUI TEMPORARIAMENTE para simplificar
         # if sequence_override is None and success_image_config and isinstance(success_image_config, dict) and step_success: # Verifica após um passo bem-sucedido
