@@ -168,20 +168,20 @@ else:
                             # Adicionar um pequeno delay após o login antes de tentar deslogar ou ir para a próxima
                             time.sleep(3) # Ajuste conforme necessário
 
-                            # 2. Executar ações (pegar_bau, pegar_recursos)
-                            print(f"\n-> Executando ações (pegar_bau, pegar_recursos) para a conta: {account.get('name')} <-")
+                            # 2. Executar ações (pegar_bau, pegar_recursos) - COMENTADO PARA TESTES RÁPIDOS
+                            print(f"\n-> PULANDO ações (pegar_bau, pegar_recursos) para testes rápidos - conta: {account.get('name')} <-")
 
-                            # Executar pegar_bau
-                            print(f"\nExecutando a ação: {pegar_bau_action_name}")
-                            # Para ações únicas do menu, carregamos do arquivo (sem override)
-                            execultar_acoes(pegar_bau_action_name, device_id=device_id_execution, account_name=account.get('name'))
-                            time.sleep(2) # Pequeno delay entre ações
+                            # # Executar pegar_bau
+                            # print(f"\nExecutando a ação: {pegar_bau_action_name}")
+                            # # Para ações únicas do menu, carregamos do arquivo (sem override)
+                            # execultar_acoes(pegar_bau_action_name, device_id=device_id_execution, account_name=account.get('name'))
+                            # time.sleep(2) # Pequeno delay entre ações
 
-                            # Executar pegar_recursos
-                            print(f"\nExecutando a ação: {pegar_recursos_action_name}")
-                            # Para ações únicas do menu, carregamos do arquivo (sem override)
-                            execultar_acoes(pegar_recursos_action_name, device_id=device_id_execution, account_name=account.get('name'))
-                            time.sleep(2) # Pequeno delay após a última ação
+                            # # Executar pegar_recursos
+                            # print(f"\nExecutando a ação: {pegar_recursos_action_name}")
+                            # # Para ações únicas do menu, carregamos do arquivo (sem override)
+                            # execultar_acoes(pegar_recursos_action_name, device_id=device_id_execution, account_name=account.get('name'))
+                            # time.sleep(2) # Pequeno delay após a última ação
 
 
                             # 3. Fazer Logout

@@ -25,6 +25,124 @@ except ImportError:
     from image_detection import find_image_on_screen
 
 
+def capturar_posicao_login_cav_dinamica(device_id=None):
+    """
+    Captura dinamicamente a posição do template '04_login_cav.png' na tela atual.
+    
+    Args:
+        device_id (str, optional): ID do dispositivo Android
+        
+    Returns:
+        tuple: (x, y) coordenadas do login_cav ou None se não encontrado
+    """
+    template_path = os.path.join("backend", "actions", "templates", "fazer_login", "04_login_cav.png")
+    
+    if not os.path.exists(template_path):
+        print(f"⚠️  Template '04_login_cav.png' não encontrado em: {template_path}")
+        return None
+    
+    try:
+        # Capturar screenshot atual
+        screenshot_path = "temp_screenshot_for_cav_detection.png"
+        capture_screen(device_id, screenshot_path)
+        
+        # Buscar o template na tela
+        result = find_image_on_screen(template_path, screenshot_path)
+        
+        if result:
+            # Calcular coordenadas do centro do template (como faz o sistema normal)
+            template_x, template_y, template_w, template_h = result
+            center_x = template_x + template_w // 2
+            center_y = template_y + template_h // 2
+            
+            print(f"🎯 POSIÇÃO DINÂMICA DO LOGIN_CAV: Template encontrado em ({template_x}, {template_y})")
+            print(f"🎯 COORDENADAS DO CENTRO: ({center_x}, {center_y})")
+            
+            # Limpar screenshot temporário
+            if os.path.exists(screenshot_path):
+                os.remove(screenshot_path)
+                
+            return (center_x, center_y)
+        else:
+            print(f"❌ Template '04_login_cav.png' não encontrado na tela atual")
+            
+            # Limpar screenshot temporário
+            if os.path.exists(screenshot_path):
+                os.remove(screenshot_path)
+                
+            return None
+            
+    except Exception as e:
+        print(f"❌ Erro ao capturar posição dinâmica do login_cav: {e}")
+        return None
+
+def calcular_posicao_conta_relativa(account_name, account_index, device_id=None):
+    """
+    Calcula a posição e scroll necessários para uma conta baseado na NOVA estratégia simplificada.
+    
+    NOVA ESTRATÉGIA SIMPLIFICADA (sugestão do usuário):
+    - login_gled (índice 0): Posição fixa, sem scroll
+    - login_inf (índice 1): Posição fixa, sem scroll  
+    - login_cav (índice 2): Posição fixa, sem scroll - POSIÇÃO DE REFERÊNCIA
+    - login_c52+ (índice 3+): Usar posição da login_cav + scroll incremental simples
+    
+    Args:
+        account_name (str): Nome da conta (ex: 'login_gled')
+        account_index (int): Índice da conta na lista (0-based)
+        device_id (str, optional): ID do dispositivo Android
+    
+    Returns:
+        dict: {
+            'scroll_needed': bool,
+            'scroll_count': int,  # Número de scrolls incrementais
+            'click_position': tuple (x, y),
+            'description': str
+        }
+    """
+    
+    # Posições fixas das 3 primeiras contas (sem scroll) - mantém detecção normal
+    # Para contas c52+ (índice 3+): usar posição DINÂMICA da login_cav + scroll incremental
+    SCROLL_UNIT = 1  # Número de scrolls por conta (incremental simples)
+    
+    # AJUSTE FINO: Controle mais preciso do scroll
+    # Cada conta c52+ precisa de scroll incremental para ficar na posição da login_cav
+    SCROLL_PRECISION_FACTOR = 1.2  # Fator de ajuste para scroll mais preciso
+    
+    if account_index <= 2:
+        # Primeiras 3 contas: usam detecção normal (clicam onde encontram o template)
+        resultado = {
+            'scroll_needed': False,
+            'scroll_count': 0,
+            'click_position': None,  # Será definido pela detecção do template
+            'description': f"{account_name} (índice {account_index}): detecção normal"
+        }
+    else:
+        # Contas c52+ (índice 3+): capturar posição dinâmica da login_cav + scroll incremental
+        print(f"🔍 Capturando posição dinâmica do login_cav para {account_name}...")
+        cav_position = capturar_posicao_login_cav_dinamica(device_id)
+        
+        if cav_position is None:
+            # Fallback para posição fixa se não conseguir capturar dinamicamente
+            print(f"⚠️  Usando posição de fallback para {account_name}")
+            cav_position = (753, 966)  # Posição de fallback baseada no último teste
+        
+        scroll_count = int((account_index - 2) * SCROLL_PRECISION_FACTOR)  # Aplicar fator de precisão
+        resultado = {
+            'scroll_needed': True,
+            'scroll_count': scroll_count,
+            'click_position': cav_position,  # Clique "cego" na posição DINÂMICA
+            'description': f"{account_name} (índice {account_index}): {scroll_count} scroll(s) OTIMIZADO → clique cego em {cav_position}"
+        }
+    
+    print(f"🎯 POSICIONAMENTO OTIMIZADO: {resultado['description']}")
+    if resultado['scroll_needed']:
+        print(f"   Scrolls: {resultado['scroll_count']} | Clique: {resultado['click_position']}")
+    else:
+        print(f"   Sem scroll | Clique: {resultado['click_position']}")
+    
+    return resultado
+
+
 def simulate_scroll(device_id=None, direction="up", duration_ms=500, start_coords=None, end_coords=None):
     """
     Simula um gesto de scroll na tela do dispositivo Android usando adb shell input swipe.
@@ -55,14 +173,14 @@ def simulate_scroll(device_id=None, direction="up", duration_ms=500, start_coord
 
         if direction == "up":
             # Scroll para cima (conteúdo sobe): Gesto de baixo para cima na tela landscape.
-            final_start_x, final_start_y = center_x_landscape, int(landscape_height * 0.8)
-            final_end_x, final_end_y = center_x_landscape, int(landscape_height * 0.2)
-            print(f"Simulando scroll genérico na direção 'up'.")
+            final_start_x, final_start_y = center_x_landscape, int(landscape_height * 0.75)  # Ajustado de 0.8 para 0.75
+            final_end_x, final_end_y = center_x_landscape, int(landscape_height * 0.25)      # Ajustado de 0.2 para 0.25
+            print(f"Simulando scroll genérico OTIMIZADO na direção 'up'.")
         elif direction == "down":
             # Scroll para baixo (conteúdo desce): Gesto de cima para baixo na tela landscape.
-            final_start_x, final_start_y = center_x_landscape, int(landscape_height * 0.2)
-            final_end_x, final_end_y = center_x_landscape, int(landscape_height * 0.8)
-            print(f"Simulando scroll genérico na direção 'down'.")
+            final_start_x, final_start_y = center_x_landscape, int(landscape_height * 0.25)  # Ajustado de 0.2 para 0.25
+            final_end_x, final_end_y = center_x_landscape, int(landscape_height * 0.75)      # Ajustado de 0.8 para 0.75
+            print(f"Simulando scroll genérico OTIMIZADO na direção 'down'.")
         else:
             print(f"Aviso: Direção de scroll '{direction}' desconhecida e coordenadas não fornecidas. Pulando scroll.")
             return # Não executa o scroll se a configuração for inválida
@@ -415,8 +533,14 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None, account
                 print(f"✅ TEMPLATE ENCONTRADO! Coordenadas: {coords}")
                 
                 if action_on_found == "click":
-                    # Se o template foi encontrado, simulamos o clique usando as coordenadas retornadas
-                    center_x, center_y = coords
+                    # Verificar se temos coordenadas forçadas (posicionamento relativo)
+                    force_coords = step_config.get('force_click_coords')
+                    if force_coords:
+                        center_x, center_y = force_coords
+                        print(f"🎯 USANDO COORDENADAS FORÇADAS (posicionamento relativo): ({center_x}, {center_y})")
+                    else:
+                        # Se o template foi encontrado, simulamos o clique usando as coordenadas retornadas
+                        center_x, center_y = coords
 
                     # Aplicar o click_offset, se for uma lista válida de 2 elementos
                     if isinstance(click_offset, list) and len(click_offset) == 2:
@@ -429,7 +553,7 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None, account
                          # Validar se click_offset foi especificado mas não é uma lista de 2 ints
                          if "click_offset" in step_config:
                               print(f"⚠️  Aviso: Configuração de click_offset inválida ({click_offset}) em {step_name}. Esperado [x, y].")
-                         print(f"👆 CLICANDO NO CENTRO: ({center_x}, {center_y})")
+                         print(f"👆 CLICANDO EM: ({center_x}, {center_y})")
                          simulate_touch(center_x, center_y, device_id=device_id) # Clica no centro se o offset for inválido ou não especificado
 
                     if click_delay > 0:
@@ -675,7 +799,7 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None, account
 def execute_login_for_account(account_info, original_sequence, device_id=None):
     """
     Executa a sequência de login, adaptando o passo do template de email
-    para a conta fornecida.
+    para a conta fornecida usando posicionamento relativo matemático.
 
     Args:
         account_info (dict): Dicionário contendo informações da conta (ex: {"name": "login_gled"}).
@@ -695,7 +819,34 @@ def execute_login_for_account(account_info, original_sequence, device_id=None):
         print("Aviso: Nome da conta não especificado. Pulando esta conta.")
         return False
 
-    print(f"\n--- Tentando fazer login com a conta: {account_name} ---")
+    # Importar lista de contas para obter o índice
+    try:
+        import sys
+        import os
+        backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        sys.path.append(os.path.join(backend_dir, 'config'))
+        from accounts_config import accounts
+        
+        # Encontrar o índice da conta atual
+        account_index = None
+        for i, account in enumerate(accounts):
+            if account.get('name') == account_name:
+                account_index = i
+                break
+        
+        if account_index is None:
+            print(f"Erro: Conta '{account_name}' não encontrada na lista de contas.")
+            return False
+            
+    except ImportError:
+        print("Erro: Não foi possível importar accounts_config. Usando posicionamento padrão.")
+        account_index = 0
+
+    print(f"\n--- Tentando fazer login com a conta: {account_name} (índice: {account_index}) ---")
+    
+    # Calcular posicionamento relativo para esta conta
+    posicionamento = calcular_posicao_conta_relativa(account_name, account_index, device_id)
+    print(f"📍 {posicionamento['description']}")
 
     # Criar uma sequência TEMPORÁRIA para esta conta, incluindo o passo do Google (se existir)
     # e APENAS o passo do template de email correspondente à conta atual.
@@ -719,7 +870,41 @@ def execute_login_for_account(account_info, original_sequence, device_id=None):
             # Verifica se o template_filename contém o account_name E termina com .png
             elif template_filename and template_filename.endswith('.png') and account_name in template_filename:
                  print(f"  Incluindo passo de template específico da conta '{account_name}': '{modified_step.get('name')}'")
-                 modified_sequence_for_execution.append(modified_step)
+                 
+                 # NOVA LÓGICA: Detecção normal para primeiras 3 contas, clique "cego" para c52+
+                 # Templates 02_login_gled, 03_login_inf, 04_login_cav usam detecção normal
+                 templates_com_deteccao_normal = ["02_login_gled.png", "03_login_inf.png", "04_login_cav.png"]
+                 
+                 if template_filename in templates_com_deteccao_normal:
+                     # Usar detecção normal do template (sem coordenadas forçadas)
+                     print(f"  🎯 Template '{template_filename}' usará detecção normal (clica onde encontrar)")
+                     modified_sequence_for_execution.append(modified_step)
+                 else:
+                     # Para templates c52+ (05_login_c52.png em diante): CLIQUE "CEGO" + SCROLL
+                     print(f"  🎯 Template '{template_filename}' usará CLIQUE CEGO na posição real do login_cav")
+                     
+                     # APLICAR SCROLL INCREMENTAL PRIMEIRO
+                     if posicionamento['scroll_needed']:
+                         # Adicionar múltiplos scrolls incrementais para posicionar a conta c52+ na posição do login_cav
+                         for i in range(posicionamento['scroll_count']):
+                             scroll_step = {
+                                 "type": "coords",
+                                 "name": f"Scroll {i+1}/{posicionamento['scroll_count']} para posicionar {account_name}",
+                                 "action": "scroll",
+                                 "direction": "up",
+                                 "duration_ms": 3000,  # Scroll mais controlado (era 800)
+                                 "coordinates": [750, 900]  # Coordenadas próximas à área das contas (era [640, 400])
+                             }
+                             modified_sequence_for_execution.append(scroll_step)
+                         print(f"  🔄 Adicionando {posicionamento['scroll_count']} scroll(s) OTIMIZADO para posicionar conta na posição do login_cav")
+                     
+                     # CLIQUE "CEGO" NA POSIÇÃO REAL DO LOGIN_CAV (753, 966)
+                     calculated_coords = posicionamento['click_position']  # (753, 966)
+                     modified_step['force_click_coords'] = list(calculated_coords)
+                     print(f"  👆 CLIQUE CEGO: {calculated_coords} (posição real do login_cav - ignorando template)")
+                     
+                     modified_sequence_for_execution.append(modified_step)
+                 
                  email_template_step_found = True # Marca que encontramos o template de email para esta conta
 
             else:
@@ -759,7 +944,7 @@ def execute_login_for_account(account_info, original_sequence, device_id=None):
     login_execution_success = execultar_acoes(action_name="fazer_login", device_id=device_id, sequence_override=modified_sequence_for_execution)
 
     # A função execultar_acoes agora retorna True se a imagem de sucesso for encontrada
-    # (ou se a sequência terminar sem erros em execução normal sem override), e False em caso de erro.
+    # (ou a sequência terminar sem erros em execução normal sem override), e False em caso de erro.
     # Para a execução de login por conta (com override), ela retornará True se a imagem de sucesso
     # for encontrada durante a execução da sequência TEMPORÁRIA.
 
