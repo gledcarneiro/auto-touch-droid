@@ -17,8 +17,8 @@ import re
 import subprocess # Importar subprocess explicitamente
 
 # Importando funções dos módulos do backend
-from .adb_utils import capture_screen, simulate_touch
-from .image_detection import find_image_on_screen
+from adb_utils import capture_screen, simulate_touch
+from image_detection import find_image_on_screen
 
 
 def simulate_scroll(device_id=None, direction="up", duration_ms=500, start_coords=None, end_coords=None):
@@ -209,7 +209,9 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None):
     success_image_config = None
 
     # --- Define action_folder based on action_name regardless of override ---
-    acoes_folder = "acoes" # Assuming 'acoes' is the base folder
+    # Caminho para a pasta de ações na nova estrutura
+    backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    acoes_folder = os.path.join(backend_dir, "actions", "templates")
     action_folder = os.path.join(acoes_folder, action_name)
     if not os.path.isdir(action_folder):
          print(f"Erro: Pasta de ação '{action_folder}' não encontrada.")
@@ -302,11 +304,23 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None):
     # para que ela funcione SOMENTE quando success_image_config for carregada do arquivo (ou seja, sequence_override is None)
 
     # --- Lógica de execução dos passos ---
+    print(f"\n🚀 INICIANDO EXECUÇÃO DA AÇÃO: '{action_name}' ({len(action_sequence)} passos)")
+    print("=" * 60)
+    
     for i, step_config in enumerate(action_sequence):
         step_number = i + 1
         step_name = step_config.get("name", f"Passo {step_number}") # Usar nome do JSON ou default
 
-        print(f"\n--- Executando {step_name} ---")
+        print(f"\n🎯 PASSO {step_number}/{len(action_sequence)}: {step_name}")
+        print(f"📋 Configuração: {step_config}")
+        print("⏳ Aguarde... preparando para executar este passo...")
+        
+        # Delay para observação
+        import time
+        time.sleep(2)  # 2 segundos para você observar
+        
+        print(f"▶️  EXECUTANDO AGORA: {step_name}")
+        print("-" * 40)
 
         step_type = step_config.get("type")
 
@@ -373,6 +387,17 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None):
 
 
             # --- Tentar encontrar o template ---
+            print(f"🔍 PROCURANDO TEMPLATE: {template_filename}")
+            print(f"📁 Caminho completo: {template_path}")
+            print(f"🎯 Ação ao encontrar: {action_on_found}")
+            print(f"🔄 Máximo de tentativas: {max_attempts}")
+            print(f"⏱️  Delay entre tentativas: {attempt_delay}s")
+            
+            if initial_delay > 0:
+                print(f"⏳ Delay inicial: {initial_delay}s")
+            
+            print("🔎 Iniciando busca na tela...")
+            
             # Usando a função find_and_optionally_click que inclui tentativas e atraso inicial
             found, coords = find_and_optionally_click(
                 template_path,
@@ -383,6 +408,8 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None):
             )
 
             if found:
+                print(f"✅ TEMPLATE ENCONTRADO! Coordenadas: {coords}")
+                
                 if action_on_found == "click":
                     # Se o template foi encontrado, simulamos o clique usando as coordenadas retornadas
                     center_x, center_y = coords
@@ -391,18 +418,20 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None):
                     if isinstance(click_offset, list) and len(click_offset) == 2:
                          final_click_x = center_x + click_offset[0]
                          final_click_y = center_y + click_offset[1]
-                         print(f"Aplicando offset [{click_offset[0]}, {click_offset[1]}]. Clicando em ({final_click_x}, {final_click_y}).")
+                         print(f"🎯 Aplicando offset [{click_offset[0]}, {click_offset[1]}]")
+                         print(f"👆 CLICANDO EM: ({final_click_x}, {final_click_y})")
                          simulate_touch(final_click_x, final_click_y, device_id=device_id)
                     else:
                          # Validar se click_offset foi especificado mas não é uma lista de 2 ints
                          if "click_offset" in step_config:
-                              print(f"Aviso: Configuração de click_offset inválida ({click_offset}) em {step_name}. Esperado [x, y].")
-                         print(f"Clicando no centro do template ({center_x}, {center_y}).")
+                              print(f"⚠️  Aviso: Configuração de click_offset inválida ({click_offset}) em {step_name}. Esperado [x, y].")
+                         print(f"👆 CLICANDO NO CENTRO: ({center_x}, {center_y})")
                          simulate_touch(center_x, center_y, device_id=device_id) # Clica no centro se o offset for inválido ou não especificado
 
                     if click_delay > 0:
+                         print(f"⏳ Aguardando {click_delay}s após o clique...")
                          time.sleep(click_delay)
-                    print(f"{step_name} ({os.path.basename(template_path)}) concluído com sucesso (Template Encontrado, Clicado).")
+                    print(f"🎉 SUCESSO: {step_name} ({os.path.basename(template_path)}) - Template encontrado e clicado!")
                     step_success = True # Passo de template/click bem-sucedido
                 # TODO: Adicionar outros tipos de action_on_found aqui (ex: swipe a partir do template)
                 else:
@@ -412,7 +441,10 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None):
                         step_success = False # Considera falha se a ação no template não puder ser executada/reconhecida
 
             else:
-                print(f"Erro: {step_name} ({os.path.basename(template_path)}) template NÃO encontrado após {max_attempts} tentativas.")
+                print(f"❌ FALHA: Template NÃO encontrado!")
+                print(f"🔍 Arquivo procurado: {os.path.basename(template_path)}")
+                print(f"🔄 Tentativas realizadas: {max_attempts}")
+                print(f"⚠️  PASSO FALHOU: {step_name}")
                 step_success = False # Passo de template falhou
 
 
@@ -509,6 +541,22 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None):
         # VAMOS MOVER A LÓGICA DE VERIFICAÇÃO DE IMAGEM DE SUCESSO PARA FORA DO execultar_acoes
         # e colocá-la na execute_login_for_account, que lida com o fluxo de login por conta.
 
+        # RESUMO DO PASSO
+        print(f"\n📊 RESUMO DO PASSO {step_number}:")
+        if step_success:
+            print(f"✅ Status: SUCESSO")
+            print(f"🎯 Passo: {step_name}")
+            print(f"🔧 Tipo: {step_type}")
+        else:
+            print(f"❌ Status: FALHA")
+            print(f"⚠️  Passo: {step_name}")
+            print(f"🔧 Tipo: {step_type}")
+            print(f"💡 Verifique se o template existe e está visível na tela!")
+        
+        print("=" * 50)
+        print("⏳ Aguardando 3 segundos antes do próximo passo...")
+        time.sleep(3)  # Pausa entre passos para observação
+        
         # REMOVENDO VERIFICAÇÃO DE SUCESSO DAQUI TEMPORARIAMENTE para simplificar
         # if sequence_override is None and success_image_config and isinstance(success_image_config, dict) and step_success: # Verifica após um passo bem-sucedido
         #      print(f"Verificando imagem de sucesso após {step_name}...")

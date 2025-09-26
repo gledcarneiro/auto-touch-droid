@@ -12,12 +12,26 @@ import os
 import time # Importar time para o delay entre contas
 import json # Importar json para carregar a sequência original
 
+# Adiciona os diretórios necessários ao path
+import sys
+import os
+
+# Adiciona o diretório raiz do projeto ao path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+backend_dir = os.path.dirname(current_dir)
+project_root = os.path.dirname(backend_dir)
+sys.path.insert(0, project_root)
+sys.path.insert(0, backend_dir)
+
 # Importa a função de execução de ações principal e a função de execução por conta
-from ..core.action_executor import execultar_acoes, execute_login_for_account
+sys.path.append(os.path.join(backend_dir, 'core'))
+sys.path.append(os.path.join(backend_dir, 'config'))
+
+from action_executor import execultar_acoes, execute_login_for_account
 
 # Importa a lista de contas do arquivo de configuração
 try:
-    from ..config.accounts_config import accounts
+    from accounts_config import accounts
     print("Lista 'accounts' importada de accounts_config.py")
 except ImportError:
     print("Erro: Não foi possível importar a lista 'accounts' de accounts_config.py.")
@@ -112,17 +126,13 @@ else:
         for i, action_name in enumerate(available_actions):
             print(f"{i + 1}: {action_name}")
 
-        # Adicionar a nova opção para executar login em todas as contas
-        login_all_option_number = len(available_actions) + 1
-        print(f"{login_all_option_number}: Executar Login para Todas as Contas (Sequência)")
+        print("\nOpções Especiais:")
+        print("l: Executar Fluxo Completo para Todas as Contas (Login → Ações → Logout)")
+        print("s: Executar Sequência Customizada")
 
-        sequence_option_number = len(available_actions) + 2
-        print(f"{sequence_option_number}: Executar Sequência Customizada") # Opção para sequência customizada
+        print("\nDigite o número da ação individual, 'l' para fluxo completo, 's' para sequência customizada, ou 'q' para sair.")
 
-        print("\nDigite o número da ação que deseja executar, 's' para sequência customizada, 'l' para login em todas as contas (sequência), ou 'q' a qualquer momento para sair.") # Atualizar prompt
-
-
-        choice = input(f"Escolha uma opção (1-{sequence_option_number}, s, l, q): ").lower() # Atualizar prompt
+        choice = input(f"Escolha uma opção (1-{len(available_actions)}, l, s, q): ").lower()
 
         if choice == 'q':
             print("Saindo do menu de execução.")

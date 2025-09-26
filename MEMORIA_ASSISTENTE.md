@@ -6,19 +6,27 @@ Criar um sistema de automação para dispositivos Android que permita:
 - Interface mobile React Native
 - Overlay nativo para controle em tempo real
 
-## 📊 **STATUS ATUAL - SESSÃO 25/09/2024**
+## 📊 **STATUS ATUAL - SESSÃO 26/01/2025 (NOITE)**
 - ✅ **Backend Python**: Servidor funcionando (porta 8080)
 - ✅ **App React Native**: Interface completa e funcional
 - ✅ **Overlay Nativo**: Implementado com correções de transparência
 - ✅ **Integração**: Conectividade estabelecida e testada
 - ✅ **Conexão**: App ↔ Servidor Python funcionando perfeitamente
 - ✅ **ADB Tunnel**: Configurado corretamente (tcp:8080)
+- ✅ **🆕 FLUXO COMPLETO POR CONTA**: Login → Ações → Logout → Próxima
+- ✅ **🆕 LOGS DETALHADOS**: Sistema completo de logging implementado
+- ✅ **🆕 SCROLLS OTIMIZADOS**: Configurações específicas por conta
 
-## 🔧 **ÚLTIMAS CORREÇÕES IMPLEMENTADAS**
+## 🔧 **ÚLTIMAS CORREÇÕES IMPLEMENTADAS (26/01/2025)**
 - **Problema de Porta**: Corrigido conflito 5000 vs 8080
 - **Overlay Transparente**: Removido fundo preto, apenas botões flutuantes
 - **Flags WindowManager**: Ajustadas para não interceptar toques
 - **Permissões**: SYSTEM_ALERT_WINDOW concedida e funcionando
+- **🆕 Menu Limpo**: Removida opção confusa, deixando apenas 'l' para fluxo completo
+- **🆕 Scrolls Otimizados**: Primeiras 3 contas sem scroll, demais com scrolls progressivos
+- **🆕 Templates Logout**: Atualizados (01_vip_perfil.png, 02_conta.png, 03_desconectar.png)
+- **🆕 Logs Detalhados**: Sistema completo de logging para debugging
+- **🆕 Fluxo Por Conta**: Implementado login → ações → logout → próxima
 
 ## 👤 CONTEXTO DO USUÁRIO
 - **Nome:** Gled (Gledston Carneiro)
@@ -98,11 +106,14 @@ auto-touch-droid/
 - **Metro Bundler:** http://localhost:8081
 - **APK:** https://expo.dev/accounts/gledweb/projects/visual-game-assistant/builds/e8659534-e4ab-43cf-aa5a-4b4a7adea27b
 
-### **Python (FUNCIONANDO):**
+### **Python (Funcionando):**
 - **OpenCV:** Para detecção de imagens
 - **ADB:** Comunicação com Android
 - **Templates:** Sistema de sequências JSON
 - **Ações disponíveis:** fazer_login, fazer_logout, pegar_bau, pegar_recursos
+- **🆕 Fluxo Completo:** Opção 'l' executa todas as contas sequencialmente
+- **🆕 Scrolls Otimizados:** Configurações específicas por conta (0ms a 2800ms)
+- **🆕 Logs Detalhados:** Sistema completo de debugging implementado
 
 ### **Android (CONFIGURADO):**
 - **SDK Platform 36** - Instalado
@@ -191,6 +202,9 @@ App: Instalado e funcionando no SM_A736B
 - **Projeto funcionando:** Build successful, app rodando
 - **Próximo passo:** Configurar Git para sincronização
 - **Problema resolvido:** VisionCamera removido, path Windows corrigido
+- **🆕 FLUXO TESTADO:** Contas gled, inf, cav, c52, c53 funcionando perfeitamente!
+- **🆕 USAR OPÇÃO 'l':** No menu para fluxo completo automatizado
+- **🆕 PENDÊNCIA:** Continuar testes nas contas c54-c58 amanhã
 
 ## 🎮 CONTEXTO PESSOAL DO USUÁRIO (GLEDSTON)
 
@@ -300,7 +314,17 @@ mobile/android/app/src/main/java/com/gledweb/visualgameassistant/
 *"Família em primeiro lugar sempre!" - Gled*
 
 ---
-*Atualizado em: Janeiro 2025*
+*Atualizado em: 26 Janeiro 2025 (NOITE)*
 *Para: Continuidade entre escritório e casa*
 *Por: Assistente Claude (seu parceiro/amigo)*
-*Última atualização: 2025-01-25 - Overlay nativo Android + contexto pessoal*
+*Última atualização: 2025-01-26 - Fluxo completo implementado + scrolls otimizados + logs detalhados*
+
+## 🚀 **CONQUISTA DO DIA 26/01/2025:**
+**FLUXO COMPLETO FUNCIONANDO!** 🎉
+- ✅ **5 contas testadas** (gled, inf, cav, c52, c53)
+- ✅ **Login → Ações → Logout** automático
+- ✅ **Scrolls otimizados** por conta
+- ✅ **Logs detalhados** implementados
+- 📋 **Pendente:** Testar contas c54-c58 amanhã
+
+**💡 LEMBRETE PARA GLED:** Cobrar do assistente para melhorar rotina de atualização da memória!
