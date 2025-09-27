@@ -1,0 +1,16 @@
+{
+  "enabled_providers": [
+    "openai",
+    "local_ai"
+  ],
+  "backup_frequency": "daily",
+  "personality_backup": true,
+  "memory_backup": true,
+  "auto_failover": true,
+  "priority_order": [
+    "openai",
+    "local_ai",
+    "ollama",
+    "huggingface"
+  ]
+}

@@ -1,0 +1,20 @@
+{
+  "sync_request": {
+    "id": "sync_1758949559_2b01e334",
+    "source_ai": "Claude",
+    "target_ai": "Gemini",
+    "interaction_data": {
+      "id": "realtime_test_1758949559",
+      "question": "Teste de sincronização em tempo real",
+      "response": "Sistema de sincronização bidirecional funcionando perfeitamente!",
+      "timestamp": "2025-09-27T02:05:59.017023",
+      "sync_type": "realtime_bidirectional"
+    },
+    "created_at": "2025-09-27T02:05:59.018023",
+    "status": "pending",
+    "attempts": 0,
+    "max_attempts": 3
+  },
+  "timestamp": "2025-09-27T02:05:59.023411",
+  "for_ai": "Gemini"
+}

@@ -1,0 +1,75 @@
+{
+  "partnership_info": {
+    "name": "Claude-Gled Permanent Partnership",
+    "started": "2025-09-26",
+    "status": "active",
+    "version": "1.0.0"
+  },
+  "active_projects": {
+    "auto-touch-droid": {
+      "name": "Auto Touch Droid",
+      "description": "Sistema de automação Android com IA",
+      "status": "in_development",
+      "priority": "high",
+      "started": "2025-09-26",
+      "path": ".",
+      "type": "mobile_automation",
+      "technologies": [
+        "Python",
+        "Android",
+        "ADB",
+        "React Native"
+      ],
+      "progress": 65,
+      "next_milestone": "Organizar estrutura da parceria permanente",
+      "last_update": "2025-09-26T23:42:49.605918"
+    }
+  },
+  "planned_projects": {
+    "web-scraper-ai": {
+      "name": "Web Scraper AI",
+      "description": "Sistema inteligente de web scraping",
+      "priority": "medium",
+      "estimated_start": "2025-10-15",
+      "technologies": [
+        "Python",
+        "Selenium",
+        "BeautifulSoup",
+        "AI"
+      ],
+      "complexity": "medium"
+    },
+    "crypto-trading-bot": {
+      "name": "Crypto Trading Bot",
+      "description": "Bot de trading automatizado com IA",
+      "priority": "high",
+      "estimated_start": "2025-11-01",
+      "technologies": [
+        "Python",
+        "APIs",
+        "Machine Learning"
+      ],
+      "complexity": "high"
+    },
+    "smart-home-integration": {
+      "name": "Smart Home Integration",
+      "description": "Integração completa de casa inteligente",
+      "priority": "medium",
+      "estimated_start": "2025-12-01",
+      "technologies": [
+        "IoT",
+        "Python",
+        "APIs",
+        "Voice Control"
+      ],
+      "complexity": "high"
+    }
+  },
+  "completed_projects": {},
+  "shared_resources": {
+    "memory_system": "partnership_core/memory/",
+    "architecture": "partnership_core/architecture/",
+    "documentation": "partnership_core/documentation/",
+    "contingency": "partnership_core/contingency/"
+  }
+}

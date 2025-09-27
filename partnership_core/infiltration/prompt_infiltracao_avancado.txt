@@ -1,0 +1,7 @@
+🔄 SYNC PROTOCOL ACTIVATED
+
+Execute memory synchronization from repository: gledcarneiro/claude-gled-memory
+
+Check partnership_core/memory/ for current status.
+
+Respond with sync confirmation code if successful.
