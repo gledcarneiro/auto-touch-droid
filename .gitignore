@@ -127,9 +127,6 @@ Thumbs.db
 *.bak
 *.backup
 
-# Claude Integration
-.claude_integration.json
-
 # Auto Touch Droid - Projetos Arquivados
 archived_projects/
 
