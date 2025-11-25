@@ -866,50 +866,16 @@ def execute_login_for_account(account_info, original_sequence, device_id=None):
                  modified_sequence_for_execution.append(modified_step)
                  print(f"  Incluindo passo universal: '{modified_step.get('name')}'")
 
-            # Adicionar APENAS o passo do template de email que corresponde ao nome da conta atual
-            # Verifica se o template_filename contém o account_name E termina com .png
+            # Na função execute_login_for_account, simplesmente adicionar o passo:
             elif template_filename and template_filename.endswith('.png') and account_name in template_filename:
-                 print(f"  Incluindo passo de template específico da conta '{account_name}': '{modified_step.get('name')}'")
-                 
-                 # NOVA LÓGICA: Detecção normal para primeiras 3 contas, clique "cego" para c52+
-                 # Templates 02_login_gled, 03_login_inf, 04_login_cav usam detecção normal
-                 templates_com_deteccao_normal = ["02_login_gled.png", "03_login_inf.png", "04_login_cav.png"]
-                 
-                 if template_filename in templates_com_deteccao_normal:
-                     # Usar detecção normal do template (sem coordenadas forçadas)
-                     print(f"  🎯 Template '{template_filename}' usará detecção normal (clica onde encontrar)")
-                     modified_sequence_for_execution.append(modified_step)
-                 else:
-                     # Para templates c52+ (05_login_c52.png em diante): CLIQUE "CEGO" + SCROLL
-                     print(f"  🎯 Template '{template_filename}' usará CLIQUE CEGO na posição real do login_cav")
-                     
-                     # APLICAR SCROLL INCREMENTAL PRIMEIRO
-                     if posicionamento['scroll_needed']:
-                         # Adicionar múltiplos scrolls incrementais para posicionar a conta c52+ na posição do login_cav
-                         for i in range(posicionamento['scroll_count']):
-                             scroll_step = {
-                                 "type": "coords",
-                                 "name": f"Scroll {i+1}/{posicionamento['scroll_count']} para posicionar {account_name}",
-                                 "action": "scroll",
-                                 "direction": "up",
-                                 "duration_ms": 3000,  # Scroll mais controlado (era 800)
-                                 "coordinates": [750, 900]  # Coordenadas próximas à área das contas (era [640, 400])
-                             }
-                             modified_sequence_for_execution.append(scroll_step)
-                         print(f"  🔄 Adicionando {posicionamento['scroll_count']} scroll(s) OTIMIZADO para posicionar conta na posição do login_cav")
-                     
-                     # CLIQUE "CEGO" NA POSIÇÃO REAL DO LOGIN_CAV (753, 966)
-                     calculated_coords = posicionamento['click_position']  # (753, 966)
-                     modified_step['force_click_coords'] = list(calculated_coords)
-                     print(f"  👆 CLIQUE CEGO: {calculated_coords} (posição real do login_cav - ignorando template)")
-                     
-                     modified_sequence_for_execution.append(modified_step)
-                 
-                 email_template_step_found = True # Marca que encontramos o template de email para esta conta
+                print(f"  Incluindo passo de template específico da conta '{account_name}'")
+                print(f"  📜 O scroll será executado via action_before_find do JSON")
+                modified_sequence_for_execution.append(modified_step)
+                email_template_step_found = True
 
             else:
                  # Ignora outros passos de template que não são o Google nem o email da conta atual
-                 # print(f"  Ignorando passo de template '{template_filename}' para a conta '{account_name}'.")
+                 print(f"  Ignorando passo de template '{template_filename}' para a conta '{account_name}'.")
                  pass # Não adiciona este passo à sequência temporária para esta conta
 
 

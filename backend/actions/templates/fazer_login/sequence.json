@@ -60,10 +60,10 @@
         "type": "template",
         "template_file": "05_login_c52.png",
         "action_on_found": "click",
-        "action_before_find": { 
+        "action_before_find": {
             "type": "scroll",
             "direction": "up",
-            "duration_ms": 1000,
+            "duration_ms": 550,
             "delay_after_scroll": 1.5
         },
         "click_delay": 0.5,
@@ -80,10 +80,10 @@
         "type": "template",
         "template_file": "06_login_c53.png",
         "action_on_found": "click",
-        "action_before_find": { 
+        "action_before_find": {
             "type": "scroll",
             "direction": "up",
-            "duration_ms": 1200,
+            "duration_ms": 500,
             "delay_after_scroll": 1.5
         },
         "click_delay": 0.5,
@@ -100,10 +100,10 @@
         "type": "template",
         "template_file": "07_login_c54.png",
         "action_on_found": "click",
-        "action_before_find": { 
+        "action_before_find": {
             "type": "scroll",
             "direction": "up",
-            "duration_ms": 1500,
+            "duration_ms": 450,
             "delay_after_scroll": 1.5
         },
         "click_delay": 0.5,
@@ -120,10 +120,10 @@
         "type": "template",
         "template_file": "08_login_c55.png",
         "action_on_found": "click",
-        "action_before_find": { 
+        "action_before_find": {
             "type": "scroll",
             "direction": "up",
-            "duration_ms": 2000,
+            "duration_ms": 400,
             "delay_after_scroll": 1.5
         },
         "click_delay": 0.5,
@@ -140,10 +140,10 @@
         "type": "template",
         "template_file": "09_login_c56.png",
         "action_on_found": "click",
-        "action_before_find": { 
+        "action_before_find": {
             "type": "scroll",
             "direction": "up",
-            "duration_ms": 2200,
+            "duration_ms": 350,
             "delay_after_scroll": 1.5
         },
         "click_delay": 0.5,
@@ -160,10 +160,10 @@
         "type": "template",
         "template_file": "10_login_c57.png",
         "action_on_found": "click",
-        "action_before_find": { 
+        "action_before_find": {
             "type": "scroll",
             "direction": "up",
-            "duration_ms": 2500,
+            "duration_ms": 250,
             "delay_after_scroll": 1.5
         },
         "click_delay": 0.5,
@@ -180,10 +180,10 @@
         "type": "template",
         "template_file": "11_login_c58.png",
         "action_on_found": "click",
-        "action_before_find": { 
+        "action_before_find": {
             "type": "scroll",
             "direction": "up",
-            "duration_ms": 2800,
+            "duration_ms": 150,
             "delay_after_scroll": 1.5
         },
         "click_delay": 0.5,

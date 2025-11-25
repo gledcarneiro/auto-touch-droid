@@ -1,13 +1,58 @@
-# Auto Touch Droid - Python Dependencies
-# Backend dependencies for image detection, ADB automation, and overlay server
+# ============================================================================
+# AUTO-TOUCH-DROID - Python Dependencies
+# ============================================================================
+# Backend dependencies for image detection, ADB automation, and API server
+# 
+# Instalação:
+#   pip install -r requirements.txt
+#
+# Instalação com dependências de desenvolvimento:
+#   pip install -r requirements.txt -r requirements-dev.txt
+# ============================================================================
 
+# ============================================================================
 # Computer Vision and Image Processing
-opencv-python==4.8.1.78
-numpy==1.24.3
+# ============================================================================
+opencv-python==4.10.0.84
+numpy==1.26.4
+pillow==10.4.0
 
-# Additional utilities that might be needed
-pillow==10.0.1
+# ============================================================================
+# Validation and Configuration
+# ============================================================================
+jsonschema==4.23.0
+python-dotenv==1.0.1
 
-# Development and testing (optional)
-# pytest==7.4.2
-# black==23.7.0
+# ============================================================================
+# API Server (Flask)
+# ============================================================================
+flask==3.0.3
+flask-cors==4.0.1
+flask-socketio==5.3.6
+python-socketio==5.11.3
+
+# ============================================================================
+# Testing and Quality Assurance
+# ============================================================================
+pytest==8.3.2
+pytest-cov==5.0.0
+pytest-mock==3.14.0
+
+# ============================================================================
+# Code Quality
+# ============================================================================
+black==24.8.0
+flake8==7.1.1
+mypy==1.11.2
+
+# ============================================================================
+# Utilities
+# ============================================================================
+requests==2.32.3
+
+# ============================================================================
+# Optional: Machine Learning (Descomentar se necessário)
+# ============================================================================
+# torch==2.4.0
+# ultralytics==8.2.0  # YOLO
+# scikit-learn==1.5.1
