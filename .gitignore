@@ -126,11 +126,17 @@ Thumbs.db
 *.temp
 *.bak
 *.backup
-# Claude Integration
-.claude_integration.json
 
 # Claude Integration
 .claude_integration.json
 
-# Claude Integration
-.claude_integration.json
+# Auto Touch Droid - Projetos Arquivados
+archived_projects/
+
+# Auto Touch Droid - Logs e Temporários
+logs/
+temp_screenshots/
+*.log
+
+# Auto Touch Droid - Screenshots temporários
+backend/temp_*.png
