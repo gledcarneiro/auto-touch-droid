@@ -1,6 +1,6 @@
 # Nome do Arquivo: 42427df3_create_action_template.py
 # Descrição: Contém funções auxiliares para criar templates de imagem manualmente e gravar sequências assistidas.
-# Versão: 01.00.13 -> Permite nomear templates durante a gravação assistida.
+# Versão: 01.00.14 -> Correção de erros de indentação e limpeza de código duplicado.
 # Analista: Gemini
 # Programador: Gled Carneiro
 # -----------------------------------------------------------------------------
@@ -15,7 +15,18 @@ import numpy as np # Importar numpy para operações com imagens
 
 # --- Funções auxiliares ---
 # Importando funções dos módulos do backend
-from ..core.adb_utils import simulate_touch, get_touch_event_coordinates, capture_screen
+# --- Configuração de Importação ---
+import sys
+import os
+
+# Adiciona o diretório raiz do projeto ao sys.path
+current_dir = os.path.dirname(os.path.abspath(__file__))
+project_root = os.path.abspath(os.path.join(current_dir, "../../"))
+if project_root not in sys.path:
+    sys.path.append(project_root)
+
+# Importando funções dos módulos do backend
+from backend.core.adb_utils import simulate_touch, get_touch_event_coordinates, capture_screen
 # from ..core.action_executor import find_and_confirm_click # Removido temporariamente se a lógica for separada
 
 # --- Configurações do Dispositivo ---
@@ -427,11 +438,26 @@ def record_action_sequence_assisted(action_name, device_id=None):
     # --- Fim do loop principal ---
 
     print(f"\nGravação da sequência de ações para '{action_name}' finalizada.")
-    # A sequência final já foi salva na última iteração do loop.
 
 
-# Exemplo de uso do script de gravação:
-# Descomente as linhas abaixo para iniciar o modo de gravação.
-# action_name_to_record = "minha_nova_acao" # Substitua pelo nome da ação que você quer gravar/editar
-# device_id_recording = 'RXCTB03EXVK'  # Substitua pelo seu device_id
-# record_action_sequence_assisted(action_name_to_record, device_id=device_recording)
+if __name__ == "__main__":
+    print("=== Assistente de Criação de Templates ===")
+    action_name_to_record = input("Digite o nome da ação para gravar (ex: entrar_rallys): ").strip()
+    
+    if action_name_to_record:
+        # Tenta pegar o device ID do .env se possível, senão usa padrão ou None
+        device_id_recording = None
+        try:
+            from dotenv import load_dotenv
+            load_dotenv()
+            device_id_recording = os.getenv("DEFAULT_DEVICE_ID")
+        except ImportError:
+            pass
+            
+        if not device_id_recording:
+            device_id_recording = 'RXCTB03EXVK' # Fallback
+            
+        print(f"Iniciando gravação para ação: '{action_name_to_record}' no device: {device_id_recording}")
+        record_action_sequence_assisted(action_name_to_record, device_id=device_id_recording)
+    else:
+        print("Nome da ação não fornecido. Encerrando.")

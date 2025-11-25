@@ -6,7 +6,12 @@
 # -----------------------------------------------------------------------------
 
 # Importa a função de gravação assistida do script create_action_template.py
-from ..actions.create_action_template import record_action_sequence_assisted
+import sys, os
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../"))
+if project_root not in sys.path:
+    sys.path.append(project_root)
+
+from backend.actions.create_action_template import record_action_sequence_assisted
 
 # Configurações
 # Substitua 'RXCTB03EXVK' pelo ID do seu dispositivo Android, se for diferente.
