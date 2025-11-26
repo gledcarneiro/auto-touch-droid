@@ -65,9 +65,9 @@
             0,
             0
         ],
-        "max_attempts": 5,
-        "attempt_delay": 1.0,
-        "initial_delay": 2.0
+        "max_attempts": 1,
+        "attempt_delay": 0.5,
+        "initial_delay": 0.5
     },
     {
         "name": "Passo 6: Template 06_marchar.png",
