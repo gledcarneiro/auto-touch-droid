@@ -182,7 +182,7 @@ def main():
                 try:
                     if fila_num >= 4 and ref_click_x is not None and ref_click_y is not None:
                         print("🔍 Usando posição fixa pós-scroll para a fila")
-                        simulate_touch(device_id=DEVICE_ID, x=ref_click_x, y=ref_click_y)
+                        simulate_touch(ref_click_x, ref_click_y, device_id=DEVICE_ID)
                         time.sleep(0.5)
                     else:
                         capture_screen(device_id=DEVICE_ID, output_path=screenshot_path)
@@ -222,7 +222,7 @@ def main():
                                 print(f"🖼️  Debug: Imagem salva em '{debug_path}'")
                         except Exception as e:
                             print(f"⚠️ Erro ao criar debug visual: {e}")
-                        simulate_touch(device_id=DEVICE_ID, x=click_x, y=click_y)
+                        simulate_touch(click_x, click_y, device_id=DEVICE_ID)
                         if fila_num == 3:
                             ref_click_x = click_x
                             ref_click_y = click_y
@@ -279,13 +279,13 @@ def main():
                     except:
                         pass
 
-                    if fila_num <= 3:
-                        next_offset_y = offset_y + FILA_SPACING
+                    if fila_num <= 2:
+                        next_offset_y = (FILA_SPACING * 2 + 80) if fila_num == 1 else (FILA_SPACING * 3 + 170)
                         if base_center_x is not None and base_center_y is not None:
                             click_x = base_center_x
                             click_y = base_center_y + next_offset_y
                             print(f"👆 Clique na próxima fila (offset +{FILA_SPACING}px) → ({click_x}, {click_y})")
-                            simulate_touch(device_id=DEVICE_ID, x=click_x, y=click_y)
+                            simulate_touch(click_x, click_y, device_id=DEVICE_ID)
                             time.sleep(0.8)
                         else:
                             # Fallback: confirmar lista e redetectar 03_fila
@@ -301,7 +301,7 @@ def main():
                                     click_x = center_x
                                     click_y = center_y + next_offset_y
                                     print(f"👆 Clique na próxima fila (offset +{FILA_SPACING}px) → ({click_x}, {click_y})")
-                                    simulate_touch(device_id=DEVICE_ID, x=click_x, y=click_y)
+                                    simulate_touch(click_x, click_y, device_id=DEVICE_ID)
                                     time.sleep(0.8)
                                     break
                                 time.sleep(0.3)
@@ -322,7 +322,7 @@ def main():
                         time.sleep(0.3)
                         if ref_click_x is not None and ref_click_y is not None:
                             print(f"👆 Clique fixo na posição da fila 3 → ({ref_click_x}, {ref_click_y})")
-                            simulate_touch(device_id=DEVICE_ID, x=ref_click_x, y=ref_click_y)
+                            simulate_touch(ref_click_x, ref_click_y, device_id=DEVICE_ID)
                             time.sleep(0.8)
                         else:
                             print("⚠️ Coordenadas da fila 3 indisponíveis. Resetando ciclo.")
@@ -347,14 +347,15 @@ def main():
                         successful_total += 1
                         success_any = True
                     else:
-                        print("❌ Correção aplicada, mas sequência falhou. Resetando ciclo.")
-                        for _ in range(5):
+                        print("⚠️ Correção falhou novamente em '05_tropas'. Preparando contexto e avançando.")
+                        for _ in range(4):
                             try:
                                 subprocess.run(["adb", "-s", DEVICE_ID, "shell", "input", "keyevent", "4"], check=True)
-                                time.sleep(0.5)
+                                time.sleep(0.4)
                             except:
                                 pass
-                        break
+                        time.sleep(0.4)
+                        continue
                 else:
                     success_marchar = execultar_acoes(
                         action_name=RALLY_ACTION_NAME,
@@ -379,7 +380,12 @@ def main():
                 
                 success_any = success_any or (success_part2_alt is True)
                 if fila_num >= 3 and success_any and not did_scroll_this_step:
-                    print("🔄 Fazendo scroll UP para revelar próxima fila...")
+                    print("🔄 Preparando lista (voltar + scroll) para próxima fila...")
+                    try:
+                        subprocess.run(["adb", "-s", DEVICE_ID, "shell", "input", "keyevent", "4"], check=True)
+                        time.sleep(0.4)
+                    except Exception:
+                        pass
                     try:
                         simulate_scroll(device_id=DEVICE_ID, direction="up", duration_ms=100)
                         time.sleep(0.5)
