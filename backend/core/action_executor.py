@@ -767,8 +767,8 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None, account
             print("⏳ Aguardando 0.5 segundos antes do próximo passo...")
             time.sleep(0.5)  # Delay reduzido para recursos já visíveis
         else:
-            print("⏳ Aguardando 0.5 segundos antes do próximo passo...")
-            time.sleep(0.5)  # Pausa padrão entre passos para observação
+            print("⏳ Aguardando 3 segundos antes do próximo passo...")
+            time.sleep(3)  # Pausa padrão entre passos para observação
         
         # REMOVENDO VERIFICAÇÃO DE SUCESSO DAQUI TEMPORARIAMENTE para simplificar
         # if sequence_override is None and success_image_config and isinstance(success_image_config, dict) and step_success: # Verifica após um passo bem-sucedido
