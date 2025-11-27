@@ -10,8 +10,8 @@
             0
         ],
         "max_attempts": 5,
-        "attempt_delay": 1.0,
-        "initial_delay": 2.0
+        "attempt_delay": 0.5,
+        "initial_delay": 0.5
     },
     {
         "name": "Passo 2: Template 02_batalha.png",
@@ -24,8 +24,8 @@
             0
         ],
         "max_attempts": 5,
-        "attempt_delay": 1.0,
-        "initial_delay": 2.0
+        "attempt_delay": 0.5,
+        "initial_delay": 0.5
     },
     {
         "name": "Passo 3: Template 03_fila.png",
@@ -38,8 +38,8 @@
             0
         ],
         "max_attempts": 5,
-        "attempt_delay": 1.0,
-        "initial_delay": 2.0
+        "attempt_delay": 0.5,
+        "initial_delay": 0.5
     },
     {
         "name": "Passo 4: Template 04_juntar.png",
@@ -52,8 +52,8 @@
             0
         ],
         "max_attempts": 5,
-        "attempt_delay": 1.0,
-        "initial_delay": 2.0
+        "attempt_delay": 0.5,
+        "initial_delay": 0.5
     },
     {
         "name": "Passo 5: Template 05_tropas.png",
@@ -80,7 +80,7 @@
             0
         ],
         "max_attempts": 5,
-        "attempt_delay": 1.0,
-        "initial_delay": 2.0
+        "attempt_delay": 0.5,
+        "initial_delay": 0.5
     }
 ]
