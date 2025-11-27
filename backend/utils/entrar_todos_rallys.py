@@ -1,15 +1,21 @@
 # Nome do Arquivo: entrar_todos_rallys.py
 # Descrição: Automatiza a entrada em todos os Monster Rallys usando os templates criados em backend/actions/templates/entrar_rallys.
-# Versão: 01.00.00
+# Versão: 02.00.00
 # Analista: Antigravity
 # Programador: Gled Carneiro
 # -----------------------------------------------------------------------------
 
 """
-Este script percorre todas as contas configuradas em `backend/config/accounts_config.py`
- e executa a sequência de ação `entrar_rallys` que foi criada com o assistente de
- templates. Cada sequência já deve conter um passo de scroll (action_before_find)
- antes de clicar no template `03_fila.png` que representa a fila do rally.
+Este script percorre até 9 filas de rally em loop infinito 24/7.
+Cada ciclo executa PARTES 1 e 2 (Aliança → Batalha) antes de processar cada fila.
+
+Fluxo por fila:
+- PARTE 1: Tela0 → Clicar Aliança (01_alianca.png) → Tela1
+- PARTE 2: Tela1 → Clicar Batalha (02_batalha.png) → Tela1-Aba
+- PARTE 3: Tela1-Aba → Detectar/Clicar Fila (03_fila.png + offset) → Tela2
+- PARTE 4: Tela2 → Clicar Juntar (04_juntar.png) → Tela3
+- PARTE 5: Tela3 → Clicar Tropas (05_tropas.png)
+- PARTE 6: Tela3 → Clicar Marchar (06_marchar.png) → Tela0
 
 Requisitos:
 - A pasta `backend/actions/templates/entrar_rallys` deve conter `sequence.json`.
@@ -37,9 +43,6 @@ if project_root not in sys.path:
 # Importar utilidades do core
 sys.path.append(os.path.join(backend_dir, "core"))
 from action_executor import execultar_acoes
-
-# Account handling removed – script will run for the currently logged‑in account only
-# No import of accounts_config is needed
 
 # ---------------------------------------------------------------------------
 # Configurações gerais
@@ -91,6 +94,15 @@ def load_sequence(action_name):
         print(f"❌ Erro ao ler {sequence_path}: {e}")
         return None
 
+def execute_back(device_id, times=1, delay=0.3):
+    """Executa o comando BACK N vezes."""
+    for _ in range(times):
+        try:
+            subprocess.run(["adb", "-s", device_id, "shell", "input", "keyevent", "4"], check=True)
+            time.sleep(delay)
+        except Exception as e:
+            print(f"⚠️ Erro ao executar BACK: {e}")
+
 # ---------------------------------------------------------------------------
 # Função principal que executa o rally para cada conta
 # ---------------------------------------------------------------------------
@@ -104,11 +116,16 @@ def main():
     if rally_sequence is None:
         print("❌ Não foi possível carregar a sequência de rally. Abortando.")
         return
-    print(f"✅ Sequência de rally carregada ({len(rally_sequence)} passos)\\n")
+    print(f"✅ Sequência de rally carregada ({len(rally_sequence)} passos)\n")
 
     # Constantes
     MAX_FILAS = 9
-    FILA_SPACING = 140  # pixels entre cada fila
+    OFFSETS_FIXOS = {
+        1: 140,   # Fila 1 (primeira visível)
+        2: 360,   # Fila 2 (segunda visível)
+        3: 590,   # Fila 3 (terceira visível)
+    }
+    OFFSET_CLICK_APOS_SCROLL = 590  # Sempre clicar na posição da fila 3 após scroll
     
     successful_total = 0
     failed_total = 0
@@ -131,48 +148,109 @@ def main():
             successful = 0
             failed = 0
             
-            # Loop principal - processar até 9 filas
+            # ================================================================
+            # PARTE 1 e 2: NAVEGAÇÃO INICIAL (executar apenas 1x por ciclo)
+            # Tela0 → Tela1 (Aliança → Batalha)
+            # ================================================================
+            print_separator("=", 80)
+            print("🏰 INICIANDO NAVEGAÇÃO: Aliança → Batalha")
+            print_separator("=", 80)
+            
+            # PARTE 1: Clicar em Aliança
+            print(f"🏰 [PARTE 1] Clicando em 'Aliança' (01_alianca.png)")
+            sequence_alianca = [rally_sequence[0]]  # passo 1 (Aliança)
+            
+            success_alianca = execultar_acoes(
+                action_name=RALLY_ACTION_NAME,
+                device_id=DEVICE_ID,
+                account_name="current",
+                sequence_override=sequence_alianca,
+            )
+            
+            if not success_alianca:
+                print("❌ Falha ao clicar em Aliança")
+                print("🔙 Voltando à Tela0 (5x BACK - garantir reset completo)...")
+                execute_back(DEVICE_ID, times=5)
+                time.sleep(0.5)
+                continue  # Reinicia o ciclo (while True)
+            
+            print("✅ 'Aliança' clicado - Tela1 aberta")
+            time.sleep(0.5)
+            
+            # PARTE 2: Clicar em Batalha
+            print(f"⚔️ [PARTE 2] Clicando em 'Batalha' (02_batalha.png)")
+            sequence_batalha = [rally_sequence[1]]  # passo 2 (Batalha)
+            
+            success_batalha = execultar_acoes(
+                action_name=RALLY_ACTION_NAME,
+                device_id=DEVICE_ID,
+                account_name="current",
+                sequence_override=sequence_batalha,
+            )
+            
+            if not success_batalha:
+                print("❌ Falha ao clicar em Batalha")
+                print("🔙 Voltando à Tela0 (5x BACK - garantir reset completo)...")
+                execute_back(DEVICE_ID, times=5)
+                time.sleep(0.5)
+                continue  # Reinicia o ciclo (while True)
+            
+            print("✅ 'Batalha' clicado - Tela1-Aba (Filas) aberta\n")
+            time.sleep(0.5)
+            
+            # ================================================================
+            # LOOP DE FILAS (processar até 9 filas)
+            # ================================================================
             for fila_num in range(1, MAX_FILAS + 1):
-                # Executar passos iniciais (Aliança → Batalha)
-                print_step(1, 2, "Executando passos iniciais (Aliança → Batalha)")
-                sequence_inicial = rally_sequence[0:2]  # passos 1-2
-                success_inicial = execultar_acoes(
-                    action_name=RALLY_ACTION_NAME,
-                    device_id=DEVICE_ID,
-                    account_name="current",
-                    sequence_override=sequence_inicial,
-                )
-                
-                if not success_inicial:
-                    print("❌ Falha nos passos iniciais (Aliança/Batalha).")
-                    print("🔄 Voltando à tela inicial e reiniciando ciclo...")
-                    # Fechar todas as janelas (múltiplos backs)
-                    for _ in range(5):
-                        try:
-                            subprocess.run(["adb", "-s", DEVICE_ID, "shell", "input", "keyevent", "4"], check=True)
-                            time.sleep(0.5)
-                        except:
-                            pass
-                    time.sleep(2)
-                    break  # Sai do loop de 9 filas e reinicia o ciclo
-            
-                print("✅ Passos iniciais OK - Tela de filas aberta\\n")
-                time.sleep(2)
-            
                 print_separator("-", 80)
                 print(f"🎯 PROCESSANDO FILA {fila_num}/{MAX_FILAS}")
                 print_separator("-", 80)
                 
-                # Calcular offset Y baseado na iteração
-                if fila_num == 1:
-                    offset_y = FILA_SPACING * 1  # Fila 1 (140px)
-                elif fila_num == 2:
-                    offset_y = FILA_SPACING * 2 + 80 # Fila 2 (220px)
-                else:  # fila_num >= 3
-                    offset_y = FILA_SPACING * 3 + 170 # Fila 3+ (310px ateh o fim do loop)
+                # ============================================================
+                # PARTE 3: DETECTAR TEMPLATE E CLICAR NA FILA
+                # Tela1-Aba (Filas) → Tela2
+                # ============================================================
+                print(f"🔍 [PARTE 3] Detectando e clicando na fila {fila_num}")
+                
+                # SCROLL (se necessário para filas 4+)
+                if fila_num >= 4:
+                    # LÓGICA DECREMENTAL: Quanto mais distante a fila, MENOR a duração (mais rápido = mais força)
+                    # Fila 4: 600ms (lento) - scroll leve
+                    # Fila 5: 500ms (médio)
+                    # Fila 6: 400ms (rápido)
+                    # Fila 7: 300ms (mais rápido)
+                    # Fila 8: 200ms (muito rápido)
+                    # Fila 9: 100ms (super rápido)
+                    
+                    base_duration = 700  # Duração máxima para fila 4
+                    decrement = 100  # Decremento por fila
+                    num_filas_apos_3 = fila_num - 3  # Fila 4=1, Fila 5=2, etc.
+                    scroll_duration = base_duration - (decrement * num_filas_apos_3)
+                    
+                    # Garantir mínimo de 100ms
+                    scroll_duration = max(scroll_duration, 100)
+                    
+                    print(f"📜 Fazendo scroll UP (duração: {scroll_duration}ms) para revelar fila {fila_num}")
+                    try:
+                        simulate_scroll(device_id=DEVICE_ID, direction="up", duration_ms=scroll_duration)
+                        time.sleep(0.5)  # Aguardar estabilização da tela
+                        print(f"✅ Scroll executado - Fila {fila_num} deve estar na posição da Fila 3")
+                    except Exception as e:
+                        print(f"❌ Erro ao executar scroll: {e}")
+                        print("🔙 Voltando à Tela0 (5x BACK - garantir reset completo)...")
+                        execute_back(DEVICE_ID, times=5)
+                        time.sleep(0.5)
+                        break  # Sai do loop de filas e reinicia ciclo
+                
+                # Determinar offset Y baseado na fila
+                if fila_num in OFFSETS_FIXOS:
+                    offset_y = OFFSETS_FIXOS[fila_num]
+                    print(f"📍 Fila {fila_num}: Offset fixo de {offset_y}px")
+                else:
+                    offset_y = OFFSET_CLICK_APOS_SCROLL
+                    print(f"📍 Fila {fila_num}: Offset pós-scroll de {offset_y}px (posição da Fila 3)")
                 
                 # Detectar template 03_fila.png (posição fixa)
-                print(f"🔍 Procurando template 03_fila.png...")
                 template_path = os.path.join(project_root, "backend", "actions", "templates", "entrar_rallys", "03_fila.png")
                 screenshot_path = "temp_screenshot_rally.png"
                 
@@ -185,20 +263,13 @@ def main():
                     
                     if result is None:
                         print(f"⚠️ Template 03_fila.png não encontrado - sem mais filas disponíveis")
-                        print("🔄 Finalizando ciclo e reiniciando...")
-                        # Voltar à tela inicial
-                        for _ in range(5):
-                            try:
-                                subprocess.run(["adb", "-s", DEVICE_ID, "shell", "input", "keyevent", "4"], check=True)
-                                time.sleep(0.5)
-                            except:
-                                pass
+                        print("🔙 Voltando à Tela0 (5x BACK - garantir reset completo)...")
+                        execute_back(DEVICE_ID, times=5)
                         time.sleep(0.5)
-                        break  # Sai do loop de 9 filas e reinicia o ciclo
+                        break  # Sai do loop de filas e reinicia ciclo
                     
                     # Extrair coordenadas (x, y, w, h)
                     x, y, w, h = result
-                    # Calcular centro do template
                     center_x = x + w // 2
                     center_y = y + h // 2
                     
@@ -209,129 +280,126 @@ def main():
                     print(f"✅ Template encontrado em ({x}, {y}), centro: ({center_x}, {center_y})")
                     print(f"👆 Clicando com offset +{offset_y}px → ({click_x}, {click_y})")
                     
-                    # DEBUG: Desenhar círculo vermelho na posição de clique (screenshot salva)
+                    # DEBUG: Desenhar círculo vermelho na posição de clique
                     try:
                         import cv2
                         debug_img = cv2.imread(screenshot_path)
                         if debug_img is not None:
-                            # Desenhar círculo vermelho no ponto de clique
                             cv2.circle(debug_img, (click_x, click_y), 30, (0, 0, 255), 5)
-                            # Desenhar cruz no centro
                             cv2.line(debug_img, (click_x - 20, click_y), (click_x + 20, click_y), (0, 0, 255), 3)
                             cv2.line(debug_img, (click_x, click_y - 20), (click_x, click_y + 20), (0, 0, 255), 3)
-                            # Adicionar texto com coordenadas
-                            cv2.putText(debug_img, f"Click: ({click_x}, {click_y})", 
+                            cv2.putText(debug_img, f"Fila {fila_num}: ({click_x}, {click_y})", 
                                        (click_x + 40, click_y), cv2.FONT_HERSHEY_SIMPLEX, 
                                        1, (0, 0, 255), 2)
-                            # Salvar imagem de debug
                             debug_path = f"debug_click_fila_{fila_num}_offset_{offset_y}.png"
                             cv2.imwrite(debug_path, debug_img)
-                            print(f"🖼️  Debug: Imagem salva em '{debug_path}'")
+                            print(f"🖼️ Debug: Imagem salva em '{debug_path}'")
                     except Exception as e:
                         print(f"⚠️ Erro ao criar debug visual: {e}")
                     
-                    # Clicar na fila com offset
+                    # Clicar na fila (Tela1-Aba → Tela2)
                     simulate_touch(device_id=DEVICE_ID, x=click_x, y=click_y)
                     time.sleep(0.5)
                     
                 except Exception as e:
                     print(f"❌ Erro ao detectar/clicar em fila: {e}")
-                    print("🔄 Voltando à tela inicial e reiniciando ciclo...")
-                    # Voltar à tela inicial
-                    for _ in range(5):
-                        try:
-                            subprocess.run(["adb", "-s", DEVICE_ID, "shell", "input", "keyevent", "4"], check=True)
-                            time.sleep(0.5)
-                        except:
-                            pass
+                    print("🔙 Voltando à Tela0 (5x BACK - garantir reset completo)...")
+                    execute_back(DEVICE_ID, times=5)
                     time.sleep(0.5)
-                    break  # Sai do loop de 9 filas e reinicia o ciclo
+                    break  # Sai do loop de filas e reinicia ciclo
                 
-                # Executar sequência: Juntar → Tropas → Marchar (passos 4, 5, 6)
-                print(f"🔄 Executando sequência (Juntar → Tropas → Marchar)...")
-                sequence_rally = rally_sequence[3:6]  # passos 4-6
+                # ============================================================
+                # PARTE 4: CLICAR EM JUNTAR (Tela2 → Tela3)
+                # ============================================================
+                print(f"🔘 [PARTE 4] Clicando em 'Juntar' (04_juntar.png)")
+                sequence_juntar = [rally_sequence[3]]  # passo 4 (Juntar)
                 
-                success_rally = execultar_acoes(
+                success_juntar = execultar_acoes(
                     action_name=RALLY_ACTION_NAME,
                     device_id=DEVICE_ID,
                     account_name="current",
-                    sequence_override=sequence_rally,
+                    sequence_override=sequence_juntar,
                 )
                 
-                if success_rally:
-                    print(f"✅ Fila {fila_num} processada com sucesso!")
-                    successful += 1
-                    successful_total += 1
-                else:
-                    print(f"⚠️ Fila {fila_num} falhou - provavelmente 05_tropas não encontrado (já na fila)")
+                if not success_juntar:
+                    print(f"⚠️ Botão 'Juntar' não encontrado ou desabilitado")
+                    print("🔙 Voltando à Tela0 (5x BACK - garantir reset completo)...")
+                    execute_back(DEVICE_ID, times=5)
+                    time.sleep(0.5)
+                    
                     failed += 1
                     failed_total += 1
                     
-                    # Fechar tela (back)
-                    try:
-                        subprocess.run(["adb", "-s", DEVICE_ID, "shell", "input", "keyevent", "4"], check=True)
-                        print("🔙 Tela fechada (back)")
-                        time.sleep(1)
-                    except Exception as e:
-                        print(f"❌ Erro ao fechar tela: {e}")
-                    
-                    # PARTE 2 ALTERNATIVA: Clicar na próxima fila e executar passos 4-6
-                    print("🔄 Executando Parte 2 alternativa (clicar próxima fila + Juntar → Tropas → Marchar)...")
-                    
-                    # Calcular offset para próxima fila (incrementa 300px)
-                    next_offset_y = offset_y + FILA_SPACING
-                    
-                    try:
-                        # Capturar tela novamente
-                        capture_screen(device_id=DEVICE_ID, output_path=screenshot_path)
-                        
-                        # Encontrar template 03_fila.png
-                        result = find_image_on_screen(screenshot_path, template_path)
-                        
-                        if result is not None:
-                            x, y, w, h = result
-                            center_x = x + w // 2
-                            center_y = y + h // 2
-                            
-                            # Clicar na próxima fila (offset + 300px)
-                            click_x = center_x
-                            click_y = center_y + next_offset_y
-                            
-                            print(f"👆 Clicando na próxima fila com offset +{next_offset_y}px → ({click_x}, {click_y})")
-                            simulate_touch(device_id=DEVICE_ID, x=click_x, y=click_y)
-                            time.sleep(0.5)
-                            
-                            # Executar Parte 2 alternativa: Juntar → Tropas → Marchar
-                            sequence_part2_alt = rally_sequence[3:6]  # passos 4-6
-                            success_part2_alt = execultar_acoes(
-                                action_name=RALLY_ACTION_NAME,
-                                device_id=DEVICE_ID,
-                                account_name="current",
-                                sequence_override=sequence_part2_alt,
-                            )
-                            
-                            if success_part2_alt:
-                                print("✅ Parte 2 alternativa OK - Rally completo na nova fila!")
-                                successful += 1
-                                successful_total += 1
-                            else:
-                                print("⚠️ Parte 2 alternativa falhou")
-                        else:
-                            print("⚠️ Não foi possível encontrar próxima fila para Parte 2 alternativa")
-                    
-                    except Exception as e:
-                        print(f"❌ Erro na Parte 2 alternativa: {e}")
+                    print(f"➡️ Continuando para próxima fila...")
+                    continue  # Próxima fila
                 
-                # Se já processamos 3 filas (fila_num >= 3), fazer scroll para revelar próxima
-                if fila_num >= 3:
-                    print("🔄 Fazendo scroll UP para revelar próxima fila...")
-                    try:
-                        simulate_scroll(device_id=DEVICE_ID, direction="up", duration_ms=100)
-                        time.sleep(1)
-                    except Exception as e:
-                        print(f"❌ Erro ao executar scroll: {e}")
-                
+                print("✅ 'Juntar' clicado - Tela3 deve abrir")
                 time.sleep(0.5)
+                
+                # ============================================================
+                # PARTE 5: CLICAR EM TROPAS (Tela3)
+                # ============================================================
+                print(f"💥 [PARTE 5] Clicando em 'Tropas' (05_tropas.png)")
+                sequence_tropas = [rally_sequence[4]]  # passo 5 (Tropas)
+                
+                success_tropas = execultar_acoes(
+                    action_name=RALLY_ACTION_NAME,
+                    device_id=DEVICE_ID,
+                    account_name="current",
+                    sequence_override=sequence_tropas,
+                )
+                
+                if not success_tropas:
+                    # ⚠️⚠️⚠️ ÚNICA FALHA ESPERADA - APENAS 1x BACK ⚠️⚠️⚠️
+                    # Tela3 não abriu (ainda em Tela2) = já estamos nesta fila
+                    print(f"⚠️ [FALHA ESPERADA - PASSO 5] Template 05_tropas.png não encontrado")
+                    print(f"⚠️ Significa: Já estamos nesta fila!")
+                    print("🔙 Voltando para Tela1-Aba (1x BACK APENAS - falha esperada)")
+                    
+                    execute_back(DEVICE_ID, times=1)  # ⚠️ APENAS 1x BACK AQUI!
+                    time.sleep(0.5)
+                    
+                    failed += 1
+                    failed_total += 1
+                    
+                    print(f"➡️ Continuando para próxima fila...")
+                    continue  # Próxima fila
+                
+                print("✅ 'Tropas' clicado")
+                time.sleep(0.5)
+                
+                # ============================================================
+                # PARTE 6: CLICAR EM MARCHAR (Tela3 → Tela0)
+                # ============================================================
+                print(f"⚔️ [PARTE 6] Clicando em 'Marchar' (06_marchar.png)")
+                sequence_marchar = [rally_sequence[5]]  # passo 6 (Marchar)
+                
+                success_marchar = execultar_acoes(
+                    action_name=RALLY_ACTION_NAME,
+                    device_id=DEVICE_ID,
+                    account_name="current",
+                    sequence_override=sequence_marchar,
+                )
+                
+                if success_marchar:
+                    print(f"✅ Fila {fila_num} processada com SUCESSO!")
+                    successful += 1
+                    successful_total += 1
+                    
+                    # Garantir que voltou à Tela0 (5x BACK por segurança)
+                    print("🔙 Voltando para Tela0 (5x BACK - garantir reset completo)")
+                    execute_back(DEVICE_ID, times=5, delay=0.3)
+                    time.sleep(0.5)
+                else:
+                    print(f"⚠️ Falha ao clicar em 'Marchar' (possível lag)")
+                    failed += 1
+                    failed_total += 1
+                    
+                    # Garantir que voltou à Tela0 (5x BACK)
+                    print("🔙 Voltando para Tela0 (5x BACK - garantir reset completo)")
+                    execute_back(DEVICE_ID, times=5, delay=0.3)
+                    time.sleep(0.5)
+
             
             # Resumo do ciclo
             print_separator("=", 80)
@@ -341,11 +409,11 @@ def main():
             print_separator("=", 80)
             
             # Aguardar antes do próximo ciclo
-            print("⏳ Aguardando 5 segundos antes do próximo ciclo...")
-            time.sleep(5)
+            print("⏳ Aguardando 3 segundos antes do próximo ciclo...")
+            time.sleep(3)
         
     except KeyboardInterrupt:
-        print("\\n⚠️ Loop interrompido pelo usuário")
+        print("\n⚠️ Loop interrompido pelo usuário")
     finally:
         total_duration = time.time() - start_time_total
         print_separator()
