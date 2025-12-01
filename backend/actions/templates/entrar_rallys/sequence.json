@@ -51,11 +51,7 @@
             0,
             0
         ],
-<<<<<<< HEAD
-        "max_attempts": 1,
-=======
         "max_attempts": 5,
->>>>>>> 73dcfb65b2d86d481234be9dbe7492a368d75749
         "attempt_delay": 0.5,
         "initial_delay": 0.5
     },
@@ -83,11 +79,7 @@
             0,
             0
         ],
-<<<<<<< HEAD
-        "max_attempts": 1,
-=======
         "max_attempts": 5,
->>>>>>> 73dcfb65b2d86d481234be9dbe7492a368d75749
         "attempt_delay": 0.5,
         "initial_delay": 0.5
     }

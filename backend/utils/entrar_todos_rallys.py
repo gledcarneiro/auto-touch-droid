@@ -169,12 +169,13 @@ def main():
             
             if not success_alianca:
                 print("❌ Falha ao clicar em Aliança")
-                print("🔄 Reiniciando ciclo (já está na Tela0)...")
-                time.sleep(2)
+                print("🔙 Voltando à Tela0 (5x BACK)...")
+                execute_back(DEVICE_ID, times=5)
+                time.sleep(0.5)
                 continue  # Reinicia o ciclo (while True)
             
             print("✅ 'Aliança' clicado - Tela1 aberta")
-            time.sleep(1)
+            time.sleep(0.5)
             
             # PARTE 2: Clicar em Batalha
             print(f"⚔️ [PARTE 2] Clicando em 'Batalha' (02_batalha.png)")
@@ -191,11 +192,11 @@ def main():
                 print("❌ Falha ao clicar em Batalha")
                 print("🔙 Voltando à Tela0 (1x BACK)...")
                 execute_back(DEVICE_ID, times=1)
-                time.sleep(2)
+                time.sleep(0.5)
                 continue  # Reinicia o ciclo (while True)
             
             print("✅ 'Batalha' clicado - Tela1-Aba (Filas) aberta\n")
-            time.sleep(1)
+            time.sleep(0.5)
             
             # ================================================================
             # LOOP DE FILAS (processar até 9 filas)
@@ -221,24 +222,24 @@ def main():
                     # Fila 8: 200ms (muito rápido)
                     # Fila 9: 100ms (super rápido)
                     
-                    base_duration = 700  # Duração máxima para fila 4
+                    base_duration = 1900  # Duração máxima para fila 4
                     decrement = 100  # Decremento por fila
                     num_filas_apos_3 = fila_num - 3  # Fila 4=1, Fila 5=2, etc.
-                    scroll_duration = base_duration - (decrement * num_filas_apos_3)
+                    scroll_duration = 2600 #base_duration - (decrement * num_filas_apos_3)
                     
                     # Garantir mínimo de 100ms
-                    scroll_duration = max(scroll_duration, 100)
+                    # scroll_duration = max(scroll_duration, 100)
                     
                     print(f"📜 Fazendo scroll UP (duração: {scroll_duration}ms) para revelar fila {fila_num}")
                     try:
                         simulate_scroll(device_id=DEVICE_ID, direction="up", duration_ms=scroll_duration)
-                        time.sleep(1)  # Aguardar estabilização da tela
+                        time.sleep(0.5)  # Aguardar estabilização da tela
                         print(f"✅ Scroll executado - Fila {fila_num} deve estar na posição da Fila 3")
                     except Exception as e:
                         print(f"❌ Erro ao executar scroll: {e}")
                         print("🔙 Voltando à Tela0 (5x BACK) e reiniciando ciclo...")
                         execute_back(DEVICE_ID, times=5)
-                        time.sleep(2)
+                        time.sleep(0.5)
                         break  # Sai do loop de filas e reinicia ciclo
                 
                 # Determinar offset Y baseado na fila
@@ -264,7 +265,7 @@ def main():
                         print(f"⚠️ Template 03_fila.png não encontrado - sem mais filas disponíveis")
                         print("🔙 Voltando à Tela0 (5x BACK) e finalizando ciclo...")
                         execute_back(DEVICE_ID, times=5)
-                        time.sleep(2)
+                        time.sleep(0.5)
                         break  # Sai do loop de filas e reinicia ciclo
                     
                     # Extrair coordenadas (x, y, w, h)
@@ -298,13 +299,13 @@ def main():
                     
                     # Clicar na fila (Tela1-Aba → Tela2)
                     simulate_touch(device_id=DEVICE_ID, x=click_x, y=click_y)
-                    time.sleep(1)
+                    time.sleep(0.5)
                     
                 except Exception as e:
                     print(f"❌ Erro ao detectar/clicar em fila: {e}")
                     print("🔙 Voltando à Tela0 (5x BACK) e reiniciando ciclo...")
                     execute_back(DEVICE_ID, times=5)
-                    time.sleep(2)
+                    time.sleep(0.5)
                     break  # Sai do loop de filas e reinicia ciclo
                 
                 # ============================================================
@@ -324,7 +325,7 @@ def main():
                     print(f"⚠️ Botão 'Juntar' não encontrado ou desabilitado (FALHA ESPERADA)")
                     print("🔙 Voltando para Tela1-Aba (1x BACK)")
                     execute_back(DEVICE_ID, times=1)
-                    time.sleep(1)
+                    time.sleep(0.5)
                     
                     failed += 1
                     failed_total += 1
@@ -333,7 +334,7 @@ def main():
                     continue  # Próxima fila (não precisa clicar Aliança/Batalha novamente)
                 
                 print("✅ 'Juntar' clicado - Tela3 deve abrir")
-                time.sleep(1)
+                time.sleep(0.5)
                 
                 # ============================================================
                 # PARTE 5: CLICAR EM TROPAS (Tela3)
@@ -355,7 +356,7 @@ def main():
                     print("🔙 Voltando para Tela1-Aba (1x BACK)")
                     
                     execute_back(DEVICE_ID, times=1)
-                    time.sleep(1)
+                    time.sleep(0.5)
                     
                     failed += 1
                     failed_total += 1
@@ -364,7 +365,7 @@ def main():
                     continue  # Próxima fila (não precisa clicar Aliança/Batalha novamente)
                 
                 print("✅ 'Tropas' clicado")
-                time.sleep(1)
+                time.sleep(0.5)
                 
                 # ============================================================
                 # PARTE 6: CLICAR EM MARCHAR (Tela3 → Tela0)
@@ -387,7 +388,7 @@ def main():
                     # Garantir que voltou à Tela0 (5x BACK por segurança)
                     print("🔙 Voltando para Tela0 (5x BACK por segurança)")
                     execute_back(DEVICE_ID, times=5, delay=0.3)
-                    time.sleep(1)
+                    time.sleep(0.5)
                 else:
                     print(f"⚠️ Falha ao clicar em 'Marchar' (possível lag)")
                     failed += 1
@@ -396,7 +397,7 @@ def main():
                     # Garantir que voltou à Tela0 (5x BACK)
                     print("🔙 Voltando para Tela0 (5x BACK)")
                     execute_back(DEVICE_ID, times=5, delay=0.3)
-                    time.sleep(1)
+                    time.sleep(0.5)
 
             
             # Resumo do ciclo
@@ -408,7 +409,7 @@ def main():
             
             # Aguardar antes do próximo ciclo
             print("⏳ Aguardando 3 segundos antes do próximo ciclo...")
-            time.sleep(3)
+            time.sleep(0.5)
         
     except KeyboardInterrupt:
         print("\n⚠️ Loop interrompido pelo usuário")
