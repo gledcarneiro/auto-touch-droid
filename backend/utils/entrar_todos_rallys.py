@@ -214,27 +214,40 @@ def main():
                 
                 # SCROLL (se necessário para filas 4+)
                 if fila_num >= 4:
-                    # LÓGICA DECREMENTAL: Quanto mais distante a fila, MENOR a duração (mais rápido = mais força)
-                    # Fila 4: 600ms (lento) - scroll leve
-                    # Fila 5: 500ms (médio)
-                    # Fila 6: 400ms (rápido)
-                    # Fila 7: 300ms (mais rápido)
-                    # Fila 8: 200ms (muito rápido)
-                    # Fila 9: 100ms (super rápido)
+                    # LÓGICA DE SCROLL PRECISO:
+                    # Para acessar filas ocultas (4+), precisamos rolar a lista para cima.
+                    # A cada scroll de uma "altura de linha", a próxima fila assume a posição da anterior.
+                    # Queremos que a Fila N fique na posição da Fila 3 (offset 590).
                     
-                    base_duration = 1900  # Duração máxima para fila 4
-                    decrement = 100  # Decremento por fila
-                    num_filas_apos_3 = fila_num - 3  # Fila 4=1, Fila 5=2, etc.
-                    scroll_duration = 2600 #base_duration - (decrement * num_filas_apos_3)
+                    num_scrolls = fila_num - 3  # Fila 4=1 scroll, Fila 5=2 scrolls, etc.
                     
-                    # Garantir mínimo de 100ms
-                    # scroll_duration = max(scroll_duration, 100)
+                    # Altura aproximada da linha baseada nos offsets fixos (590 - 360 = 230px)
+                    row_height = 230 
                     
-                    print(f"📜 Fazendo scroll UP (duração: {scroll_duration}ms) para revelar fila {fila_num}")
+                    # Coordenadas para Swipe (Arrastar de baixo para cima para subir o conteúdo)
+                    # Start Y = 800 (parte inferior)
+                    # End Y = 800 - 230 = 570 (sobe exatamente uma linha)
+                    center_x = 1200 # Centro da tela (landscape 2400)
+                    start_y = 800
+                    end_y = start_y - row_height
+                    
+                    scroll_duration = 1000 # Duração longa (1s) para evitar inércia (fling) e garantir precisão
+                    
+                    print(f"📜 Necessário rolar {num_scrolls}x ({row_height}px cada) para revelar fila {fila_num}")
+                    
                     try:
-                        simulate_scroll(device_id=DEVICE_ID, direction="up", duration_ms=scroll_duration)
-                        time.sleep(0.5)  # Aguardar estabilização da tela
-                        print(f"✅ Scroll executado - Fila {fila_num} deve estar na posição da Fila 3")
+                        for i in range(num_scrolls):
+                            print(f"   ↳ Scroll {i+1}/{num_scrolls}: Swipe {start_y} -> {end_y}")
+                            simulate_scroll(
+                                device_id=DEVICE_ID, 
+                                start_coords=[center_x, start_y], 
+                                end_coords=[center_x, end_y], 
+                                duration_ms=scroll_duration
+                            )
+                            time.sleep(0.8)  # Aguardar estabilização entre scrolls
+                        
+                        print(f"✅ Scroll concluído - Fila {fila_num} deve estar na posição da Fila 3")
+                        
                     except Exception as e:
                         print(f"❌ Erro ao executar scroll: {e}")
                         print("🔙 Voltando à Tela0 (5x BACK) e reiniciando ciclo...")
@@ -435,3 +448,13 @@ if __name__ == "__main__":
         traceback.print_exc()
     finally:
         print("\n👋 Programa finalizado")
+"""
+Cálculo de Scrolls: Em vez de tentar ajustar a duração do scroll, o script agora calcula quantas "linhas" precisa rolar para trazer a fila desejada (4, 5, etc.) para a posição da Fila 3.
+Exemplo: Para a Fila 5, ele rola 2 vezes (5 - 3 = 2).
+Altura da Linha: Defini a altura da linha como 230px (baseado na diferença entre os offsets das filas 2 e 3: 590 - 360 = 230).
+Scroll Preciso: O scroll agora é feito arrastando de y=800 para y=570 (exatamente 230px para cima), com duração de 1 segundo para evitar "inércia" (o efeito de jogar a tela). Isso garante que a lista pare exatamente onde queremos.
+Loop: Se precisar rolar mais de uma linha, ele faz isso em um loop, garantindo que cada movimento seja controlado.
+Agora, ao processar a Fila 4+, ele deve trazê-la exatamente para a posição onde a Fila 3 costuma ficar, e o clique subsequente (com offset 590) deve acertar o alvo.
+
+Pode testar e me avisar se a precisão melhorou!
+"""
