@@ -1,0 +1,58 @@
+[
+    {
+        "name": "Passo 1: Template 01_localizar.png",
+        "type": "template",
+        "template_file": "01_localizar.png",
+        "action_on_found": "click",
+        "click_delay": 0.5,
+        "click_offset": [
+            0,
+            0
+        ],
+        "max_attempts": 5,
+        "attempt_delay": 1.0,
+        "initial_delay": 2.0
+    },
+    {
+        "name": "Passo 2: Template 02_buscar.png",
+        "type": "template",
+        "template_file": "02_buscar.png",
+        "action_on_found": "click",
+        "click_delay": 0.5,
+        "click_offset": [
+            0,
+            0
+        ],
+        "max_attempts": 5,
+        "attempt_delay": 1.0,
+        "initial_delay": 2.0
+    },
+    {
+        "name": "Passo 3: Template 03_tropas.png",
+        "type": "template",
+        "template_file": "03_tropas.png",
+        "action_on_found": "click",
+        "click_delay": 0.5,
+        "click_offset": [
+            0,
+            0
+        ],
+        "max_attempts": 5,
+        "attempt_delay": 1.0,
+        "initial_delay": 2.0
+    },
+    {
+        "name": "Passo 4: Template 04_ataque.png",
+        "type": "template",
+        "template_file": "04_ataque.png",
+        "action_on_found": "click",
+        "click_delay": 0.5,
+        "click_offset": [
+            0,
+            0
+        ],
+        "max_attempts": 5,
+        "attempt_delay": 1.0,
+        "initial_delay": 2.0
+    }
+]
