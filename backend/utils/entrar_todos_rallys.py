@@ -98,6 +98,27 @@ def verificar_gatilho(screenshot_path=os.path.join(project_root, "temp_screensho
     
     return False
 
+def clicar_preparacao(template_path, descricao):
+    """
+    Busca e clica em um template de preparação global.
+    """
+    print(f"🔎 Procurando preparação: {descricao}...")
+    screenshot_path = os.path.join(project_root, "temp_screenshots", "temp_prep.png")
+    capture_screen(DEVICE_ID, screenshot_path)
+    result = find_image_on_screen(screenshot_path, template_path)
+    
+    if result:
+        x, y, w, h = result
+        center_x = x + w // 2
+        center_y = y + h // 2
+        print(f"✅ {descricao} encontrado! Clicando em ({center_x}, {center_y})...")
+        simulate_touch(center_x, center_y, DEVICE_ID)
+        time.sleep(5.0) # Tempo para a UI reagir e abrir o menu/mapa
+        return True
+    else:
+        print(f"⚠️ {descricao} não encontrado. Seguindo fluxo...")
+        return False
+
 # ---------------------------------------------------------------------------
 # Lógica de Navegação e Processamento (Rally)
 # ---------------------------------------------------------------------------
@@ -261,7 +282,11 @@ def executar_tarefas_secundarias():
     execute_back(times=5)
     time.sleep(1.5)
     
-    # 1. PEGAR BAÚ
+    # 1. PREPARAÇÃO E PEGAR BAÚ
+    # Clica no ícone global que leva para a área de baú/recursos (geralmente mapa ou base)
+    clicar_preparacao(TEMPLATE_BAU_RECURSOS, "Ícone Prepara Baú/Recursos")
+    
+    print("\n📦 [TAREFA 1/3] Executando: pegar_bau...")
     print("\n📦 [TAREFA 1/3] Executando: pegar_bau...")
     bau_sequence = load_sequence("pegar_bau")
     if bau_sequence:
@@ -286,7 +311,6 @@ def executar_tarefas_secundarias():
             if executar_com_gatilho("pegar_recursos", i, recursos_sequence):
                 print("🚨 Gatilho detectado durante pegar_recursos! Abortando tarefas secundárias.")
                 return
-            time.sleep(0.5)
         print("✅ pegar_recursos concluído.")
     else:
         print("⚠️ Sequência pegar_recursos não encontrada. Pulando...")
@@ -295,7 +319,10 @@ def executar_tarefas_secundarias():
     execute_back(times=3)
     time.sleep(1.0)
     
-    # 3. MATAR MOBS (Loop Infinito)
+    # 3. PREPARAÇÃO E MATAR MOBS (Loop Infinito)
+    # Clica no ícone global que leva para o mapa/busca de mobs
+    clicar_preparacao(TEMPLATE_MATAR_MOBS, "Ícone Prepara Mobs")
+
     print("\n⚔️ [TAREFA 3/3] Executando: matar_mobs (loop infinito)...")
     mobs_sequence = load_sequence("matar_mobs")
     if mobs_sequence:
@@ -308,6 +335,56 @@ def executar_tarefas_secundarias():
                 if executar_com_gatilho("matar_mobs", i, mobs_sequence):
                     print("🚨 Gatilho detectado durante matar_mobs! Voltando para Rallies.")
                     return
+                
+                # Lógica injetada: Clique no centro após '01_buscar.png'
+                # Isso garante que o menu feche ou o foco mude antes de tentar clicar em tropas
+                step = mobs_sequence[i]
+                
+                # Tenta extrair o nome da imagem de diferentes formatos possíveis
+                if isinstance(step, dict):
+                    # Tenta vários campos possíveis
+                    image_name = step.get("image", step.get("template_file", step.get("name", "")))
+                else:
+                    image_name = str(step)
+                
+                print(f"🔍 [DEBUG] Passo {i}: step completo = {step}")
+                print(f"🔍 [DEBUG] Passo {i}: image_name extraído = '{image_name}'")
+                
+                if "01_buscar" in image_name:  # Removido .png para ser mais flexível
+                    click_x = 1200
+                    click_y = 550
+                    
+                    # Debug Visual ANTES do clique (captura a tela atual)
+                    print(f"ℹ️ [Injeção] Preparando clique no centro da tela ({click_x}, {click_y})...")
+                    try:
+                        import cv2
+                        screenshot_path = os.path.join(project_root, "temp_screenshots", "temp_screenshot_rally.png")
+                        capture_screen(DEVICE_ID, screenshot_path)  # Captura ANTES do clique
+                        debug_img = cv2.imread(screenshot_path)
+                        if debug_img is not None:
+                            # Desenha um círculo vermelho grande no ponto de clique
+                            cv2.circle(debug_img, (click_x, click_y), 30, (0, 0, 255), -1)
+                            # Desenha uma cruz amarela para marcar o centro exato
+                            cv2.line(debug_img, (click_x - 50, click_y), (click_x + 50, click_y), (0, 255, 255), 3)
+                            cv2.line(debug_img, (click_x, click_y - 50), (click_x, click_y + 50), (0, 255, 255), 3)
+                            # Adiciona texto descritivo
+                            cv2.putText(debug_img, f"CLIQUE CENTRO ({click_x}, {click_y})", (click_x + 40, click_y - 10), 
+                                       cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+                            
+                            debug_filename = os.path.join(project_root, "temp_screenshots", "debug_click_centro.png")
+                            cv2.imwrite(debug_filename, debug_img)
+                            print(f"🖼️ Debug do clique no centro salvo: {debug_filename}")
+                    except Exception as e:
+                        print(f"⚠️ Erro ao salvar debug visual do centro: {e}")
+                    
+                    # Aguarda animação e executa o clique
+                    print("ℹ️ Aguardando a animação do mob terminar...")
+                    time.sleep(5.0)
+                    
+                    print(f"👆 Clicando no centro da tela em: ({click_x}, {click_y})...")
+                    simulate_touch(click_x, click_y, DEVICE_ID) 
+                    time.sleep(0.5)
+
                 time.sleep(0.5)
             
             # Pequeno delay entre ciclos de mob

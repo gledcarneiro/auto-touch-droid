@@ -5,8 +5,14 @@
         "direction": "up",
         "duration_ms": 300,
         "delay_after_scroll": 1.0,
-        "start_coords": [640, 800],
-        "end_coords": [640, 100]
+        "start_coords": [
+            640,
+            800
+        ],
+        "end_coords": [
+            640,
+            -10
+        ]
     },
     {
         "name": "Passo 1: Template 01_pedreira.png",
@@ -15,7 +21,7 @@
         "action_on_found": "click",
         "click_delay": 0.2,
         "max_attempts": 5,
-        "attempt_delay": 1.0,
+        "attempt_delay": 0.5,
         "initial_delay": 0.1
     },
     {
@@ -25,7 +31,7 @@
         "action_on_found": "click",
         "click_delay": 0.2,
         "max_attempts": 5,
-        "attempt_delay": 1.0,
+        "attempt_delay": 0.5,
         "initial_delay": 0.1
     },
     {
@@ -35,7 +41,7 @@
         "action_on_found": "click",
         "click_delay": 0.2,
         "max_attempts": 5,
-        "attempt_delay": 1.0,
+        "attempt_delay": 0.5,
         "initial_delay": 0.1
     },
     {
@@ -45,7 +51,17 @@
         "action_on_found": "click",
         "click_delay": 0.2,
         "max_attempts": 5,
-        "attempt_delay": 1.0,
+        "attempt_delay": 0.5,
+        "initial_delay": 0.1
+    },
+    {
+        "name": "Passo 5: Template 05_campo.png",
+        "type": "template",
+        "template_file": "05_campo.png",
+        "action_on_found": "click",
+        "click_delay": 5.0,
+        "max_attempts": 5,
+        "attempt_delay": 0.5,
         "initial_delay": 0.1
     }
 ]
