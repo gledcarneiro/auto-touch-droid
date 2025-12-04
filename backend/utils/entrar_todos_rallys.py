@@ -1,6 +1,6 @@
 # Nome do Arquivo: entrar_todos_rallys.py
-# Descrição: Bot de Rally com Tarefas Secundárias (Baú, Recursos, Mobs) - Versão 4.0
-# Versão: 04.00.00 (Arquitetura Híbrida com Gatilho)
+# Descrição: Bot de Rally com Tarefas Secundárias (Baú, Recursos, Mobs) - Versão 4.1
+# Versão: 04.01.00 (Scroll Cego Progressivo)
 # Analista: Antigravity
 # Programador: Gled Carneiro
 # -----------------------------------------------------------------------------
@@ -42,6 +42,7 @@ OFFSETS_FIXOS = {
     1: 140,
     2: 360,
     3: 590,
+    4: 540,  # Offset ajustado para fila 4 após primeiro scroll
 }
 OFFSET_CLICK_APOS_SCROLL = 590
 
@@ -392,12 +393,12 @@ def executar_tarefas_secundarias():
         FLAG_RALLY = True  # Força retorno ao modo rally
 
 # ---------------------------------------------------------------------------
-# Loop Principal
+# Loop Principal - SCROLL CEGO PROGRESSIVO
 # ---------------------------------------------------------------------------
 def main():
     global FLAG_RALLY
     
-    print("🚀 Iniciando Bot de Rally Híbrido (24/7)")
+    print("🚀 Iniciando Bot de Rally Híbrido (24/7) - Scroll Cego Progressivo")
     print("📋 Modo: Rally (Prioridade) + Tarefas Secundárias (Idle)")
     
     rally_sequence = load_sequence(RALLY_ACTION_NAME)
@@ -405,65 +406,79 @@ def main():
         print("❌ Erro: Sequência de rally não carregada.")
         return
 
+    # Variável para controlar primeiro ciclo (detecção de lista vazia)
+    primeiro_ciclo = True
+    
     while True:
         if FLAG_RALLY:
             # ========== MODO RALLY ATIVO ==========
             print("\n" + "="*80)
-            print("🎯 MODO RALLY ATIVO")
+            print("🎯 MODO RALLY ATIVO - Scroll Cego Progressivo")
             print("="*80)
             
-            if not navegar_para_lista_rallys(rally_sequence):
-                print("🔙 Falha na navegação. Resetando (5x BACK)...")
-                execute_back(times=5)
-                continue
-            
-            # Loop de Filas
-            reset_needed = False
             rallies_joined = 0  # Contador de rallies que conseguimos entrar
+            
+            # Loop de Filas (1-9) - NUNCA PARA NO MEIO
             for fila in range(1, MAX_FILAS + 1):
+                print(f"\n{'='*60}")
+                print(f"🎯 Processando Fila {fila}/{MAX_FILAS}")
+                print(f"{'='*60}")
+                
+                # NAVEGAÇÃO ANTES DE CADA FILA (Aliança → Batalha)
+                if not navegar_para_lista_rallys(rally_sequence):
+                    print("🔙 Falha na navegação. Resetando (5x BACK)...")
+                    execute_back(times=5)
+                    time.sleep(1.0)
+                    continue  # Pula para próxima fila
+                
+                # PROCESSAR FILA
                 status = processar_fila(fila, rally_sequence)
                 
+                # Tratamento de status
                 if status == 'REFRESH':
-                    if fila == 1:
-                        # Não achou nem a primeira fila = lista vazia
-                        print("⚠️ Lista de rallies vazia. Entrando em modo IDLE...")
+                    if fila == 1 and primeiro_ciclo:
+                        # Primeira fila do primeiro ciclo não encontrada = lista vazia
+                        print("⚠️ Lista de rallies vazia (primeiro ciclo). Entrando em modo IDLE...")
                         FLAG_RALLY = False
                         break
                     else:
-                        # Acabaram as filas, mas processou algumas
-                        print("🔄 Fim da lista de rallies. Atualizando...")
-                        break
+                        # Fila não encontrada, mas continua para próxima
+                        print(f"⚠️ Fila {fila} não encontrada. Continuando para próxima...")
+                        execute_back(times=2)  # Volta para garantir estado limpo
+                        time.sleep(0.5)
+                        continue
                         
                 elif status == 'MARCHED':
-                    rallies_joined += 1  # Incrementa o contador
-                    print("🎉 Rally concluído! Reiniciando ciclo...")
-                    reset_needed = True 
-                    break
+                    rallies_joined += 1
+                    print(f"✅ Rally {rallies_joined} concluído! Continuando para próxima fila...")
+                    # NÃO FAZ BREAK - Continua para próxima fila
+                    time.sleep(1.0)
+                    continue
                     
                 elif status == 'NEXT':
-                    print("➡️ Indo para próxima fila...")
+                    print(f"➡️ Fila {fila} já participada ou indisponível. Próxima fila...")
                     continue
                     
                 elif status == 'ERROR':
-                    print("❌ Erro crítico. Resetando...")
+                    print(f"❌ Erro na fila {fila}. Resetando e continuando...")
                     execute_back(times=5)
-                    reset_needed = True
-                    break
+                    time.sleep(1.0)
+                    continue
             
-            # Se processou todas as filas mas não conseguiu entrar em nenhuma, ativa modo IDLE
-            if rallies_joined == 0 and not reset_needed and FLAG_RALLY:
-                print("⚠️ Nenhum rally disponível para entrar (todos já participados). Entrando em modo IDLE...")
-                FLAG_RALLY = False
-                
-            if reset_needed:
-                time.sleep(1)
+            # Fim do ciclo de 9 filas
+            primeiro_ciclo = False  # Marca que primeiro ciclo foi concluído
+            
+            if not FLAG_RALLY:
+                # Se FLAG_RALLY foi desativada (lista vazia no primeiro ciclo), sai do modo rally
                 continue
-                
-            # Soft Reset (atualizar lista)
-            if FLAG_RALLY:  # Só faz soft reset se ainda estiver em modo rally
-                print("🔄 Reiniciando ciclo de navegação (Soft Reset)...")
-                execute_back(times=1) 
-                time.sleep(1.0)
+            
+            # Relatório do ciclo
+            print("\n" + "="*80)
+            print(f"📊 CICLO COMPLETO: {rallies_joined} rallies participados")
+            print("🔄 Iniciando Loop de Segurança (varredura infinita)...")
+            print("="*80)
+            
+            time.sleep(2.0)  # Pequena pausa entre ciclos
         
         else:
             # ========== MODO TAREFAS SECUNDÁRIAS ==========
