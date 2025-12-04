@@ -48,8 +48,10 @@ OFFSET_CLICK_APOS_SCROLL = 590
 # FLAG GLOBAL: Controla se o bot está em modo Rally ou Tarefas Secundárias
 FLAG_RALLY = True
 
-# Template do gatilho (aviso de novo rally)
-GATILHO_TEMPLATE = os.path.join(project_root, "backend", "actions", "templates", "_global", "aviso_novo_rally.png")
+# Template globais
+GATILHO_TEMPLATE      = os.path.join(project_root, "backend", "actions", "templates", "_global", "prepara_voltar_rally.png")
+TEMPLATE_MATAR_MOBS   = os.path.join(project_root, "backend", "actions", "templates", "_global", "prepara_matar_mobs_novo_rally.png")
+TEMPLATE_BAU_RECURSOS = os.path.join(project_root, "backend", "actions", "templates", "_global", "prepara_pegar_bau_recursos.png")
 
 # ---------------------------------------------------------------------------
 # Funções Auxiliares
@@ -77,7 +79,7 @@ def load_sequence(action_name):
 def get_template_path(filename):
     return os.path.join(project_root, "backend", "actions", "templates", RALLY_ACTION_NAME, filename)
 
-def verificar_gatilho(screenshot_path="temp_screenshot_rally.png"):
+def verificar_gatilho(screenshot_path=os.path.join(project_root, "temp_screenshots", "temp_screenshot_rally.png")):
     """
     Verifica se o aviso de novo rally apareceu na screenshot atual.
     Retorna True se detectado, False caso contrário.
@@ -155,7 +157,7 @@ def processar_fila(fila_num, rally_sequence):
     # 2. DETECTAR E CLICAR NA FILA
     offset_y = OFFSETS_FIXOS.get(fila_num, OFFSET_CLICK_APOS_SCROLL)
     template_path = get_template_path("03_fila.png")
-    screenshot_path = "temp_screenshot_rally.png"
+    screenshot_path = os.path.join(project_root, "temp_screenshots", "temp_screenshot_rally.png")
     
     capture_screen(DEVICE_ID, screenshot_path)
     result = find_image_on_screen(screenshot_path, template_path)
@@ -184,7 +186,7 @@ def processar_fila(fila_num, rally_sequence):
             cv2.line(debug_img, (click_x, center_y), (click_x, click_y), (255, 0, 0), 2)
             cv2.putText(debug_img, f"Fila {fila_num} (+{offset_y})", (click_x + 30, click_y), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
             
-            debug_filename = f"debug_click_fila_{fila_num}.png"
+            debug_filename = os.path.join(project_root, "temp_screenshots", f"debug_click_fila_{fila_num}.png")
             cv2.imwrite(debug_filename, debug_img)
             print(f"🖼️ Debug salvo: {debug_filename}")
     except Exception as e:
@@ -231,7 +233,7 @@ def executar_com_gatilho(action_name, step_index, sequence):
     global FLAG_RALLY
     
     # Captura a tela para o passo atual
-    screenshot_path = "temp_screenshot_rally.png"
+    screenshot_path = os.path.join(project_root, "temp_screenshots", "temp_screenshot_rally.png")
     capture_screen(DEVICE_ID, screenshot_path)
     
     # VERIFICA O GATILHO ANTES DE EXECUTAR O PASSO
