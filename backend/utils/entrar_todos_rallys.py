@@ -221,15 +221,15 @@ def processar_fila(fila_num, rally_sequence):
     # 3. CLICAR EM JUNTAR
     print("🔘 Clicando em 'Juntar'...")
     if not execultar_acoes(RALLY_ACTION_NAME, device_id=DEVICE_ID, account_name="current", sequence_override=[rally_sequence[3]]):
-        print("⚠️ 'Juntar' não disponível (Falha Esperada - Já participou ou cheio).")
+        print("⚠️ Botão 'Juntar' não encontrado = NÃO HÁ RALLY DISPONÍVEL nesta posição.")
         print("🔙 Voltando para lista (1x BACK)...")
         execute_back(times=1)
-        return 'NEXT'
+        return 'NO_RALLY'
     
     # 4. CLICAR EM TROPAS
     print("💥 Clicando em 'Tropas'...")
     if not execultar_acoes(RALLY_ACTION_NAME, device_id=DEVICE_ID, account_name="current", sequence_override=[rally_sequence[4]]):
-        print("⚠️ 'Tropas' não disponível (Falha Esperada).")
+        print("⚠️ 'Tropas' não disponível = JÁ PARTICIPOU deste rally.")
         print("🔙 Voltando para lista (1x BACK)...")
         execute_back(times=1)
         return 'NEXT'
@@ -455,8 +455,19 @@ def main():
                     time.sleep(1.0)
                     continue
                     
+                elif status == 'NO_RALLY':
+                    if fila == 1:
+                        # Primeira fila sem rally = Lista vazia
+                        print("⚠️ Nenhum rally disponível na primeira fila. Entrando em modo IDLE...")
+                        FLAG_RALLY = False
+                        break
+                    else:
+                        # Filas subsequentes sem rally = Fim da lista
+                        print(f"🔄 Fim da lista de rallies (fila {fila} vazia). Encerrando ciclo...")
+                        break
+                        
                 elif status == 'NEXT':
-                    print(f"➡️ Fila {fila} já participada ou indisponível. Próxima fila...")
+                    print(f"➡️ Fila {fila} já participada. Próxima fila...")
                     continue
                     
                 elif status == 'ERROR':
