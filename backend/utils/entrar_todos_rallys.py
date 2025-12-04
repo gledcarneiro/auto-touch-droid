@@ -50,7 +50,7 @@ FLAG_RALLY = True
 
 # Template globais
 GATILHO_TEMPLATE      = os.path.join(project_root, "backend", "actions", "templates", "_global", "prepara_voltar_rally.png")
-TEMPLATE_MATAR_MOBS   = os.path.join(project_root, "backend", "actions", "templates", "_global", "prepara_matar_mobs_novo_rally.png")
+TEMPLATE_MATAR_MOBS   = os.path.join(project_root, "backend", "actions", "templates", "_global", "prepara_matar_mobs.png")
 TEMPLATE_BAU_RECURSOS = os.path.join(project_root, "backend", "actions", "templates", "_global", "prepara_pegar_bau_recursos.png")
 
 # ---------------------------------------------------------------------------
@@ -347,9 +347,6 @@ def executar_tarefas_secundarias():
                 else:
                     image_name = str(step)
                 
-                print(f"🔍 [DEBUG] Passo {i}: step completo = {step}")
-                print(f"🔍 [DEBUG] Passo {i}: image_name extraído = '{image_name}'")
-                
                 if "01_buscar" in image_name:  # Removido .png para ser mais flexível
                     click_x = 1200
                     click_y = 550
@@ -391,8 +388,7 @@ def executar_tarefas_secundarias():
             time.sleep(1.0)
     else:
         print("⚠️ Sequência matar_mobs não encontrada.")
-        print("⏳ Aguardando 30 segundos antes de verificar rallies novamente...")
-        time.sleep(30)
+        time.sleep(3)
         FLAG_RALLY = True  # Força retorno ao modo rally
 
 # ---------------------------------------------------------------------------
