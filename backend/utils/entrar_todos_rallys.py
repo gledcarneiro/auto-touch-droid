@@ -1,6 +1,6 @@
 # Nome do Arquivo: entrar_todos_rallys.py
-# Descrição: Bot de Rally com Tarefas Secundárias (Baú, Recursos, Mobs) - Versão 4.1
-# Versão: 04.01.00 (Scroll Cego Progressivo)
+# Descrição: Bot de Rally com Tarefas Secundárias (Baú, Recursos, Mobs) - Versão 4.2
+# Versão: 04.02.00 (Scroll Configurável via JSON)
 # Analista: Antigravity
 # Programador: Gled Carneiro
 # -----------------------------------------------------------------------------
@@ -41,10 +41,9 @@ MAX_FILAS = 9
 OFFSETS_FIXOS = {
     1: 140,
     2: 360,
-    3: 590,
-    4: 540,  # Offset ajustado para fila 4 após primeiro scroll
+    3: 590
 }
-OFFSET_CLICK_APOS_SCROLL = 590
+OFFSET_CLICK_APOS_SCROLL = 650
 
 # FLAG GLOBAL: Controla se o bot está em modo Rally ou Tarefas Secundárias
 FLAG_RALLY = True
@@ -65,6 +64,18 @@ def execute_back(times=1, delay=0.3):
             time.sleep(delay)
         except Exception as e:
             print(f"⚠️ Erro ao executar BACK: {e}")
+
+def load_scroll_config():
+    """Carrega configurações de scroll do JSON."""
+    config_path = os.path.join(current_dir, "scroll_config.json")
+    try:
+        with open(config_path, "r", encoding="utf-8") as f:
+            config = json.load(f)
+        return config.get("filas", {})
+    except Exception as e:
+        print(f"⚠️ Erro ao carregar scroll_config.json: {e}")
+        print("⚠️ Usando configurações padrão de scroll.")
+        return {}
 
 def load_sequence(action_name):
     sequence_path = os.path.join(project_root, "backend", "actions", "templates", action_name, "sequence.json")
@@ -149,22 +160,40 @@ def navegar_para_lista_rallys(rally_sequence):
     
     return False
 
-def processar_fila(fila_num, rally_sequence):
+def processar_fila(fila_num, rally_sequence, scroll_config):
     """
     Processa uma única fila.
     """
     print(f"\n🎯 [Fila {fila_num}] Iniciando processamento...")
     
-    # 1. SCROLL (se necessário)
+    # 1. SCROLL (se necessário) - USA CONFIGURAÇÕES DO JSON
     if fila_num >= 4:
-        num_scrolls = fila_num - 3
-        row_height = 230
-        center_x = 1200
-        start_y = 800
-        end_y = start_y - row_height
-        scroll_duration = 1000
+        fila_key = str(fila_num)
         
-        print(f"📜 Scroll: {num_scrolls}x ({row_height}px) para revelar Fila {fila_num}")
+        if fila_key in scroll_config:
+            config = scroll_config[fila_key]
+            num_scrolls = config.get("num_scrolls", fila_num - 3)
+            row_height = config.get("row_height", 230)
+            scroll_duration = config.get("scroll_duration", 1000)
+            start_y = config.get("start_y", 800)
+            center_x = config.get("center_x", 1200)
+        else:
+            # Fallback para valores padrão se não houver config
+            print(f"⚠️ Configuração não encontrada para Fila {fila_num}. Usando padrão.")
+            num_scrolls = fila_num - 3
+            row_height = 230
+            center_x = 1200
+            start_y = 800
+            scroll_duration = 1000
+        
+        end_y = start_y - row_height
+        
+        print(f"📜 Scroll Config para Fila {fila_num}:")
+        print(f"   • Scrolls: {num_scrolls}x")
+        print(f"   • Distância: {row_height}px (Y: {start_y} → {end_y})")
+        print(f"   • Duração: {scroll_duration}ms")
+        print(f"   • Posição X: {center_x}")
+        
         try:
             for i in range(num_scrolls):
                 simulate_scroll(DEVICE_ID, start_coords=[center_x, start_y], end_coords=[center_x, end_y], duration_ms=scroll_duration)
@@ -406,6 +435,13 @@ def main():
         print("❌ Erro: Sequência de rally não carregada.")
         return
 
+    # Carrega configurações de scroll do JSON
+    scroll_config = load_scroll_config()
+    if scroll_config:
+        print("✅ Configurações de scroll carregadas do scroll_config.json")
+    else:
+        print("⚠️ Usando configurações padrão de scroll")
+
     # Variável para controlar primeiro ciclo (detecção de lista vazia)
     primeiro_ciclo = True
     
@@ -432,7 +468,7 @@ def main():
                     continue  # Pula para próxima fila
                 
                 # PROCESSAR FILA
-                status = processar_fila(fila, rally_sequence)
+                status = processar_fila(fila, rally_sequence, scroll_config)
                 
                 # Tratamento de status
                 if status == 'REFRESH':

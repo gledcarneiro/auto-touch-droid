@@ -1,0 +1,73 @@
+{
+    "_comment": "Configuração de Scroll por Fila - Auto Touch Droid Rally Bot",
+    "_description": "Ajuste individual de scroll para cada fila (4-9). Use teste_scroll.py para calibrar.",
+    "_instructions": {
+        "num_scrolls": "Quantidade de scrolls a executar",
+        "row_height": "Distância em pixels (quanto maior, mais sobe a lista)",
+        "scroll_duration": "Duração em ms (1000 = 1 segundo, valores menores = mais rápido)",
+        "start_y": "Coordenada Y inicial do scroll",
+        "center_x": "Coordenada X do scroll (centro da lista)"
+    },
+    "filas": {
+        "1": {
+            "_comment": "Fila 1 - Visível sem scroll",
+            "num_scrolls": 0
+        },
+        "2": {
+            "_comment": "Fila 2 - Visível sem scroll",
+            "num_scrolls": 0
+        },
+        "3": {
+            "_comment": "Fila 3 - Visível sem scroll",
+            "num_scrolls": 0
+        },
+        "4": {
+            "_comment": "Fila 4 - Primeiro scroll necessário",
+            "num_scrolls": 1,
+            "row_height": 130,
+            "scroll_duration": 1000,
+            "start_y": 800,
+            "center_x": 1200
+        },
+        "5": {
+            "_comment": "Fila 5 - Ajuste individual completo",
+            "num_scrolls": 1,
+            "row_height": 280,
+            "scroll_duration": 1000,
+            "start_y": 800,
+            "center_x": 1200
+        },
+        "6": {
+            "_comment": "Fila 6 - Ajuste individual completo",
+            "num_scrolls": 1,
+            "row_height": 430,
+            "scroll_duration": 1000,
+            "start_y": 800,
+            "center_x": 1200
+        },
+        "7": {
+            "_comment": "Fila 7 - Ajuste individual completo",
+            "num_scrolls": 1,
+            "row_height": 580,
+            "scroll_duration": 1000,
+            "start_y": 800,
+            "center_x": 1200
+        },
+        "8": {
+            "_comment": "Fila 8 - Ajuste individual completo",
+            "num_scrolls": 1,
+            "row_height": 730,
+            "scroll_duration": 1000,
+            "start_y": 800,
+            "center_x": 1200
+        },
+        "9": {
+            "_comment": "Fila 9 - Máximo scroll necessário",
+            "num_scrolls": 1,
+            "row_height": 880,
+            "scroll_duration": 1000,
+            "start_y": 800,
+            "center_x": 1200
+        }
+    }
+}
