@@ -56,6 +56,52 @@ TEMPLATE_BAU_RECURSOS = os.path.join(project_root, "backend", "actions", "templa
 # ---------------------------------------------------------------------------
 # Funções Auxiliares
 # ---------------------------------------------------------------------------
+def verificar_dispositivo_conectado():
+    """Verifica se o dispositivo está conectado via ADB."""
+    try:
+        result = subprocess.run(
+            ["adb", "devices"], 
+            capture_output=True, 
+            text=True, 
+            timeout=5
+        )
+        # Verifica se o DEVICE_ID está na lista de dispositivos
+        return DEVICE_ID in result.stdout and "device" in result.stdout
+    except Exception:
+        return False
+
+def aguardar_reconexao():
+    """Aguarda o dispositivo reconectar. Retorna quando conectado."""
+    import os
+    
+    # Limpa a tela (Windows: cls, Linux/Mac: clear)
+    os.system('cls' if os.name == 'nt' else 'clear')
+    
+    print("\n" + "="*80)
+    print("⚠️ DISPOSITIVO DESCONECTADO!")
+    print("="*80)
+    print(f"🔌 Aguardando reconexão do dispositivo {DEVICE_ID}...")
+    print("💡 Plugue o cabo USB novamente para continuar.")
+    print("="*80)
+    print()  # Linha em branco
+    
+    tentativas = 0
+    while True:
+        tentativas += 1
+        
+        if verificar_dispositivo_conectado():
+            print("\n\n" + "="*80)
+            print(f"✅ DISPOSITIVO RECONECTADO! (após {tentativas} tentativas)")
+            print("="*80)
+            print("🔄 Resetando estado e reiniciando bot...")
+            time.sleep(2.0)  # Aguarda estabilização
+            return True
+        
+        # Mostra contador em linha única (sobrescreve)
+        print(f"\r⏳ Tentativa {tentativas}... ", end='', flush=True)
+        
+        time.sleep(3.0)  # Aguarda 3s entre verificações
+
 def execute_back(times=1, delay=0.3):
     """Executa o comando BACK N vezes."""
     for _ in range(times):
@@ -442,8 +488,10 @@ def main():
     else:
         print("⚠️ Usando configurações padrão de scroll")
 
-    # Variável para controlar primeiro ciclo (detecção de lista vazia)
-    primeiro_ciclo = True
+    # RESET COMPLETO: Garante estado limpo (importante após reconexão USB)
+    global FLAG_RALLY
+    FLAG_RALLY = True  # Sempre inicia em modo rally
+    primeiro_ciclo = True  # Sempre trata como primeiro ciclo
     
     while True:
         if FLAG_RALLY:
@@ -453,6 +501,7 @@ def main():
             print("="*80)
             
             rallies_joined = 0  # Contador de rallies que conseguimos entrar
+            jah_na_lista = False  # Flag para indicar se já estamos na lista de rallys
             
             # Loop de Filas (1-9) - NUNCA PARA NO MEIO
             for fila in range(1, MAX_FILAS + 1):
@@ -461,11 +510,17 @@ def main():
                 print(f"{'='*60}")
                 
                 # NAVEGAÇÃO ANTES DE CADA FILA (Aliança → Batalha)
-                if not navegar_para_lista_rallys(rally_sequence):
-                    print("🔙 Falha na navegação. Resetando (5x BACK)...")
-                    execute_back(times=5)
-                    time.sleep(1.0)
-                    continue  # Pula para próxima fila
+                # OTIMIZAÇÃO: Pula navegação se já estamos na lista (após falha no Passo 5)
+                if not jah_na_lista:
+                    if not navegar_para_lista_rallys(rally_sequence):
+                        print("🔙 Falha na navegação. Resetando (5x BACK)...")
+                        execute_back(times=5)
+                        time.sleep(1.0)
+                        jah_na_lista = False  # Reset flag
+                        continue  # Pula para próxima fila
+                else:
+                    print("⚡ OTIMIZAÇÃO: Já estamos na lista, pulando navegação!")
+                    jah_na_lista = False  # Reset flag para próxima iteração
                 
                 # PROCESSAR FILA
                 status = processar_fila(fila, rally_sequence, scroll_config)
@@ -482,6 +537,7 @@ def main():
                         print(f"⚠️ Fila {fila} não encontrada. Continuando para próxima...")
                         execute_back(times=2)  # Volta para garantir estado limpo
                         time.sleep(0.5)
+                        jah_na_lista = False  # Reset flag
                         continue
                         
                 elif status == 'MARCHED':
@@ -489,27 +545,26 @@ def main():
                     print(f"✅ Rally {rallies_joined} concluído! Continuando para próxima fila...")
                     # NÃO FAZ BREAK - Continua para próxima fila
                     time.sleep(1.0)
+                    jah_na_lista = False  # Reset flag
                     continue
                     
                 elif status == 'NO_RALLY':
-                    if fila == 1:
-                        # Primeira fila sem rally = Lista vazia
-                        print("⚠️ Nenhum rally disponível na primeira fila. Entrando em modo IDLE...")
-                        FLAG_RALLY = False
-                        break
-                    else:
-                        # Filas subsequentes sem rally = Fim da lista
-                        print(f"🔄 Fim da lista de rallies (fila {fila} vazia). Encerrando ciclo...")
-                        break
+                    # Filas sem rally = Fim da lista (não entra em IDLE!)
+                    # Botão "Juntar" sempre aparece (mesmo desabilitado)
+                    # IDLE só acontece quando template 03_fila.png não é encontrado (REFRESH)
+                    print(f"🔄 Fim da lista de rallies (fila {fila} vazia). Encerrando ciclo...")
+                    break
                         
                 elif status == 'NEXT':
                     print(f"➡️ Fila {fila} já participada. Próxima fila...")
+                    jah_na_lista = True  # MARCA que já estamos na lista!
                     continue
                     
                 elif status == 'ERROR':
                     print(f"❌ Erro na fila {fila}. Resetando e continuando...")
                     execute_back(times=5)
                     time.sleep(1.0)
+                    jah_na_lista = False  # Reset flag
                     continue
             
             # Fim do ciclo de 9 filas
@@ -531,13 +586,37 @@ def main():
             # ========== MODO TAREFAS SECUNDÁRIAS ==========
             executar_tarefas_secundarias()
             # Quando retornar, FLAG_RALLY já estará True (gatilho ativou)
+            
+            # RESET: Marca como primeiro ciclo novamente após retornar do IDLE
+            # Isso permite que o bot entre em IDLE novamente se a lista estiver vazia
+            primeiro_ciclo = True
+            print("🔄 Retornando ao modo rally. Resetando flag de primeiro ciclo...")
 
 if __name__ == "__main__":
-    try:
-        main()
-    except KeyboardInterrupt:
-        print("\n🛑 Interrompido pelo usuário.")
-    except Exception as e:
-        print(f"❌ Erro fatal: {e}")
-        import traceback
-        traceback.print_exc()
+    while True:  # Loop infinito para recuperação de desconexão
+        try:
+            main()
+        except KeyboardInterrupt:
+            print("\n🛑 Interrompido pelo usuário.")
+            break  # Sai do loop infinito
+        except Exception as e:
+            error_msg = str(e)
+            
+            # Detecta desconexão do dispositivo
+            if "device" in error_msg.lower() and "not found" in error_msg.lower():
+                print(f"\n⚠️ Erro de conexão detectado: {e}")
+                
+                # Aguarda reconexão
+                aguardar_reconexao()
+                
+                # Reseta e reinicia
+                print("🔄 Reiniciando bot do zero...")
+                time.sleep(1.0)
+                continue  # Volta ao início do loop (chama main() novamente)
+            
+            # Outros erros: mostra e para
+            else:
+                print(f"❌ Erro fatal: {e}")
+                import traceback
+                traceback.print_exc()
+                break  # Sai do loop

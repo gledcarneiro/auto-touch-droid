@@ -165,7 +165,8 @@ def capture_screen(device_id=None, output_path="screenshot.png"):
 
     except subprocess.TimeoutExpired as e:
         print(f"Erro de timeout ao executar comando adb: {e.cmd}")
-        print(f"Stderr: {e.stderr.strip()}")
+        if e.stderr:
+            print(f"Stderr: {e.stderr.strip()}")
         # Attempt to clean up the temp file on the device even after a timeout
         try:
              subprocess.run(command_rm, timeout=5)
@@ -175,7 +176,8 @@ def capture_screen(device_id=None, output_path="screenshot.png"):
         return False
     except subprocess.CalledProcessError as e:
         print(f"Erro ao capturar a tela: {e}")
-        print(f"Stderr: {e.stderr.strip()}")
+        if e.stderr:
+            print(f"Stderr: {e.stderr.strip()}")
         # Attempt to clean up the temp file on the device even after an error
         try:
              subprocess.run(command_rm, timeout=5)
@@ -219,7 +221,10 @@ def simulate_touch(x, y, device_id=None):
         print(f"Erro de timeout ao simular o toque: {e.cmd}")
     except subprocess.CalledProcessError as e:
         print(f"Erro ao simular o toque: {e}")
-        print(f"Stderr: {e.stderr.strip()}")
+        if e.stderr:
+            print(f"Stderr: {e.stderr.strip()}")
+        # Lança exceção para ser capturada pelo sistema de reconexão
+        raise
     except FileNotFoundError:
         print("Erro: adb não encontrado. Certifique-se de que o Android SDK está instalado e no PATH.")
     except Exception as e:
