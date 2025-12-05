@@ -11,7 +11,11 @@
         ],
         "max_attempts": 5,
         "attempt_delay": 1.0,
-        "initial_delay": 2.0
+        "initial_delay": 2.0,
+        "wait_for_template": true,
+        "wait_timeout": 3,
+        "wait_interval": 0.2,
+        "post_detection_delay": 0.5
     },
     {
         "name": "Passo 2: Template 02_login_gled.png",
@@ -25,7 +29,11 @@
         ],
         "max_attempts": 5,
         "attempt_delay": 1.0,
-        "initial_delay": 2.0
+        "initial_delay": 2.0,
+        "wait_for_template": true,
+        "wait_timeout": 3,
+        "wait_interval": 0.2,
+        "post_detection_delay": 0.5
     },
     {
         "name": "Passo 3: Template 03_login_inf.png",
@@ -39,7 +47,11 @@
         ],
         "max_attempts": 5,
         "attempt_delay": 1.0,
-        "initial_delay": 2.0
+        "initial_delay": 2.0,
+        "wait_for_template": true,
+        "wait_timeout": 3,
+        "wait_interval": 0.2,
+        "post_detection_delay": 0.5
     },
     {
         "name": "Passo 4: Template 04_login_cav.png",
@@ -53,7 +65,11 @@
         ],
         "max_attempts": 5,
         "attempt_delay": 1.0,
-        "initial_delay": 2.0
+        "initial_delay": 2.0,
+        "wait_for_template": true,
+        "wait_timeout": 3,
+        "wait_interval": 0.2,
+        "post_detection_delay": 0.5
     },
     {
         "name": "Passo 5: Template 05_login_c52.png",
@@ -73,7 +89,11 @@
         ],
         "max_attempts": 5,
         "attempt_delay": 1.0,
-        "initial_delay": 2.0
+        "initial_delay": 2.0,
+        "wait_for_template": false,
+        "wait_timeout": 3,
+        "wait_interval": 0.2,
+        "post_detection_delay": 0.5
     },
     {
         "name": "Passo 6: Template 06_login_c53.png",
@@ -93,7 +113,11 @@
         ],
         "max_attempts": 5,
         "attempt_delay": 1.0,
-        "initial_delay": 2.0
+        "initial_delay": 2.0,
+        "wait_for_template": false,
+        "wait_timeout": 3,
+        "wait_interval": 0.2,
+        "post_detection_delay": 0.5
     },
     {
         "name": "Passo 7: Template 07_login_c54.png",
@@ -113,7 +137,11 @@
         ],
         "max_attempts": 5,
         "attempt_delay": 1.0,
-        "initial_delay": 2.0
+        "initial_delay": 2.0,
+        "wait_for_template": false,
+        "wait_timeout": 3,
+        "wait_interval": 0.2,
+        "post_detection_delay": 0.5
     },
     {
         "name": "Passo 8: Template 08_login_c55.png",
@@ -133,7 +161,11 @@
         ],
         "max_attempts": 5,
         "attempt_delay": 1.0,
-        "initial_delay": 2.0
+        "initial_delay": 2.0,
+        "wait_for_template": false,
+        "wait_timeout": 3,
+        "wait_interval": 0.2,
+        "post_detection_delay": 0.5
     },
     {
         "name": "Passo 9: Template 09_login_c56.png",
@@ -153,7 +185,11 @@
         ],
         "max_attempts": 5,
         "attempt_delay": 1.0,
-        "initial_delay": 2.0
+        "initial_delay": 2.0,
+        "wait_for_template": false,
+        "wait_timeout": 3,
+        "wait_interval": 0.2,
+        "post_detection_delay": 0.5
     },
     {
         "name": "Passo 10: Template 10_login_c57.png",
@@ -173,7 +209,11 @@
         ],
         "max_attempts": 5,
         "attempt_delay": 1.0,
-        "initial_delay": 2.0
+        "initial_delay": 2.0,
+        "wait_for_template": false,
+        "wait_timeout": 3,
+        "wait_interval": 0.2,
+        "post_detection_delay": 0.5
     },
     {
         "name": "Passo 11: Template 11_login_c58.png",
@@ -193,6 +233,10 @@
         ],
         "max_attempts": 5,
         "attempt_delay": 1.0,
-        "initial_delay": 2.0
+        "initial_delay": 2.0,
+        "wait_for_template": false,
+        "wait_timeout": 3,
+        "wait_interval": 0.2,
+        "post_detection_delay": 0.5
     }
 ]

@@ -9,7 +9,11 @@
         "action_after_find": null,
         "max_attempts": 5,
         "attempt_delay": 0.5,
-        "initial_delay": 0.5
+        "initial_delay": 0.5,
+        "wait_for_template": true,
+        "wait_timeout": 3,
+        "wait_interval": 0.2,
+        "post_detection_delay": 0.5
     },
     {
         "name": "Passo 2: Template 02_gratis.png",
@@ -21,7 +25,11 @@
         "action_after_find": null,
         "max_attempts": 5,
         "attempt_delay": 0.5,
-        "initial_delay": 0.5
+        "initial_delay": 0.5,
+        "wait_for_template": true,
+        "wait_timeout": 2,
+        "wait_interval": 0.2,
+        "post_detection_delay": 0.5
     },
     {
         "name": "Passo 3: Template 03_confirmar.png",
@@ -33,7 +41,11 @@
         "action_after_find": null,
         "max_attempts": 5,
         "attempt_delay": 0.5,
-        "initial_delay": 0.5
+        "initial_delay": 0.5,
+        "wait_for_template": true,
+        "wait_timeout": 2,
+        "wait_interval": 0.2,
+        "post_detection_delay": 0.3
     },
     {
         "name": "Passo 4: Template 04_voltar.png",
@@ -45,6 +57,10 @@
         "action_after_find": null,
         "max_attempts": 5,
         "attempt_delay": 0.5,
-        "initial_delay": 0.5
+        "initial_delay": 0.5,
+        "wait_for_template": true,
+        "wait_timeout": 2,
+        "wait_interval": 0.2,
+        "post_detection_delay": 0.3
     }
 ]

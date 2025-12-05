@@ -7,7 +7,8 @@
 # Versão: 01.00.10 -> Corrigido UnboundLocalError para success_image_config quando usando sequence_override.
 # Versão: 01.00.11 -> Corrigido o caminho do template ao usar sequence_override para garantir que a pasta da ação correta seja usada.
 # Versão: 01.00.12 -> Corrigido processamento de action_before_find quando usando sequence_override.
-# Analista: Gemini
+# Versão: 01.00.13 -> Adicionada função wait_for_template() para otimização de velocidade (substitui time.sleep por detecção ativa).
+# Analista: Antigravity
 # Programador: Gled Carneiro
 # -----------------------------------------------------------------------------
 import time
@@ -23,6 +24,85 @@ try:
 except ImportError:
     from adb_utils import capture_screen, simulate_touch
     from image_detection import find_image_on_screen
+
+
+# ---------------------------------------------------------------------------
+# Função de Espera Inteligente por Template (Otimização de Velocidade)
+# ---------------------------------------------------------------------------
+def wait_for_template(template_path, device_id=None, screenshot_path="temp_screenshot_wait.png", 
+                      timeout=10, interval=0.2, post_detection_delay=0.5):
+    """
+    Espera até que um template apareça na tela (substitui time.sleep por detecção ativa).
+    
+    Esta função implementa "polling inteligente" ao invés de espera fixa, permitindo que
+    o bot continue assim que o elemento estiver pronto, economizando tempo significativo.
+    
+    Args:
+        template_path (str): Caminho do template a detectar
+        device_id (str, optional): ID do dispositivo Android
+        screenshot_path (str, optional): Caminho temporário para screenshots
+        timeout (float): Tempo máximo de espera em segundos (default: 10)
+        interval (float): Intervalo entre capturas em segundos (default: 0.2)
+        post_detection_delay (float): Delay APÓS detectar o template para animações (default: 0.5)
+    
+    Returns:
+        tuple: (x, y, w, h) se encontrado, None se timeout
+    
+    Example:
+        # Ao invés de:
+        time.sleep(2.0)
+        
+        # Use:
+        wait_for_template("04_juntar.png", timeout=3, post_detection_delay=0.3)
+    """
+    start_time = time.time()
+    attempts = 0
+    
+    # Ensure the directory for the temp screenshot exists
+    temp_dir = os.path.dirname(screenshot_path)
+    if temp_dir and not os.path.exists(temp_dir):
+        try:
+            os.makedirs(temp_dir)
+        except OSError:
+            screenshot_path = os.path.basename(screenshot_path)  # Fallback to current directory
+    
+    print(f"⏳ Aguardando template '{os.path.basename(template_path)}' (timeout: {timeout}s)...")
+    
+    while (time.time() - start_time) < timeout:
+        attempts += 1
+        
+        # Captura e detecta
+        if not capture_screen(device_id=device_id, output_path=screenshot_path):
+            # Se falhar a captura, aguarda e tenta novamente
+            time.sleep(interval)
+            continue
+        
+        result = find_image_on_screen(screenshot_path, template_path)
+        
+        # Limpa screenshot temporário
+        if os.path.exists(screenshot_path):
+            try:
+                os.remove(screenshot_path)
+            except (PermissionError, Exception):
+                pass  # Ignora erros de remoção
+        
+        if result:
+            elapsed = time.time() - start_time
+            print(f"✅ Template encontrado em {attempts} tentativas ({elapsed:.2f}s)")
+            
+            # NÃO aplicar delay aqui - será aplicado DEPOIS de extrair coordenadas
+            # para garantir que o clique aconteça na posição correta após animação
+            
+            return result
+        
+        # Intervalo entre tentativas
+        time.sleep(interval)
+    
+    # Timeout atingido
+    elapsed = time.time() - start_time
+    print(f"⏱️ Timeout após {attempts} tentativas ({elapsed:.2f}s)")
+    print(f"⚠️ Template '{os.path.basename(template_path)}' não encontrado")
+    return None
 
 
 def capturar_posicao_login_cav_dinamica(device_id=None):
@@ -460,6 +540,12 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None, account
             max_attempts = step_config.get("max_attempts", 1) # Default 1 attempt
             attempt_delay = step_config.get("attempt_delay", 1.0) # Default 1 second delay between attempts
             initial_delay = step_config.get("initial_delay", 0) # Novo campo para atraso inicial
+            
+            # NOVOS PARÂMETROS PARA MODO OTIMIZADO
+            wait_enabled = step_config.get("wait_for_template", False)  # Ativa modo otimizado
+            wait_timeout = step_config.get("wait_timeout", 10)  # Timeout de espera
+            wait_interval = step_config.get("wait_interval", 0.2)  # Intervalo entre capturas
+            post_delay = step_config.get("post_detection_delay", 0.5)  # Delay após detectar
 
             if not template_filename:
                 print(f"Erro: Passo {step_number} ('{step_name}') do tipo 'template' não especifica 'template_file'. Pulando passo.")
@@ -510,24 +596,54 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None, account
 
 
             # --- Tentar encontrar o template ---
-            print(f"🔍 PROCURANDO TEMPLATE: {template_filename}")
-            print(f"🎯 Ação ao encontrar: {action_on_found}")
-            print(f"🔄 Máximo de tentativas: {max_attempts}")
-            print(f"⏱️  Delay entre tentativas: {attempt_delay}s")
+            # MODO OTIMIZADO (wait_for_template) ou MODO TRADICIONAL (find_and_optionally_click)
+            found = False
+            coords = None
             
-            if initial_delay > 0:
-                print(f"⏳ Delay inicial: {initial_delay}s")
-            
-            print("🔎 Iniciando busca na tela...")
-            
-            # Usando a função find_and_optionally_click que inclui tentativas e atraso inicial
-            found, coords = find_and_optionally_click(
-                template_path,
-                device_id=device_id,
-                max_attempts=max_attempts,
-                attempt_delay=attempt_delay,
-                initial_delay=initial_delay # Passando o novo parâmetro
-            )
+            if wait_enabled:
+                # ========== MODO OTIMIZADO: wait_for_template ==========
+                print(f"🚀 MODO OTIMIZADO ATIVADO")
+                print(f"🔍 PROCURANDO TEMPLATE: {template_filename}")
+                print(f"⏱️  Timeout: {wait_timeout}s | Intervalo: {wait_interval}s | Delay pós-detecção: {post_delay}s")
+                
+                result = wait_for_template(
+                    template_path,
+                    device_id=device_id,
+                    timeout=wait_timeout,
+                    interval=wait_interval,
+                    post_detection_delay=post_delay
+                )
+                
+                if result:
+                    found = True
+                    x, y, w, h = result
+                    center_x = x + w // 2
+                    center_y = y + h // 2
+                    coords = (center_x, center_y)
+                else:
+                    found = False
+                    coords = None
+                    
+            else:
+                # ========== MODO TRADICIONAL: find_and_optionally_click ==========
+                print(f"🔍 PROCURANDO TEMPLATE: {template_filename}")
+                print(f"🎯 Ação ao encontrar: {action_on_found}")
+                print(f"🔄 Máximo de tentativas: {max_attempts}")
+                print(f"⏱️  Delay entre tentativas: {attempt_delay}s")
+                
+                if initial_delay > 0:
+                    print(f"⏳ Delay inicial: {initial_delay}s")
+                
+                print("🔎 Iniciando busca na tela...")
+                
+                # Usando a função find_and_optionally_click que inclui tentativas e atraso inicial
+                found, coords = find_and_optionally_click(
+                    template_path,
+                    device_id=device_id,
+                    max_attempts=max_attempts,
+                    attempt_delay=attempt_delay,
+                    initial_delay=initial_delay # Passando o novo parâmetro
+                )
 
             if found:
                 print(f"✅ TEMPLATE ENCONTRADO! Coordenadas: {coords}")
@@ -541,6 +657,13 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None, account
                     else:
                         # Se o template foi encontrado, simulamos o clique usando as coordenadas retornadas
                         center_x, center_y = coords
+
+                    # APLICAR POST_DETECTION_DELAY AQUI (no modo otimizado)
+                    # Aguarda DEPOIS de detectar mas ANTES de clicar
+                    # Isso garante que animações (como slide) terminem antes do clique
+                    if wait_enabled and post_delay > 0:
+                        print(f"⏳ Aguardando {post_delay}s pós-detecção (animação)...")
+                        time.sleep(post_delay)
 
                     # Aplicar o click_offset, se for uma lista válida de 2 elementos
                     if isinstance(click_offset, list) and len(click_offset) == 2:
@@ -556,9 +679,13 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None, account
                          print(f"👆 CLICANDO EM: ({center_x}, {center_y})")
                          simulate_touch(center_x, center_y, device_id=device_id) # Clica no centro se o offset for inválido ou não especificado
 
-                    if click_delay > 0:
+                    # OTIMIZAÇÃO: No modo otimizado, post_detection_delay JÁ cumpre o papel de click_delay
+                    if not wait_enabled and click_delay > 0:
                          print(f"⏳ Aguardando {click_delay}s após o clique...")
                          time.sleep(click_delay)
+                    elif wait_enabled:
+                         print(f"⚡ Modo otimizado: click_delay ignorado (post_detection_delay já aplicado)")
+                    
                     # Log de sucesso melhorado
                     account_info = f" - Conta: {account_name}" if account_name else ""
                     print(f"🎉 SUCESSO [Passo {step_number}] - Template: {os.path.basename(template_path)} - Acao: {action_name}{account_info}")
@@ -592,6 +719,13 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None, account
                     
                     # AGORA executa o clique
                     center_x, center_y = coords
+                    
+                    # APLICAR POST_DETECTION_DELAY AQUI (no modo otimizado)
+                    # Aguarda DEPOIS de detectar mas ANTES de clicar
+                    if wait_enabled and post_delay > 0:
+                        print(f"⏳ Aguardando {post_delay}s pós-detecção (animação)...")
+                        time.sleep(post_delay)
+                    
                     if isinstance(click_offset, list) and len(click_offset) == 2:
                          final_click_x = center_x + click_offset[0]
                          final_click_y = center_y + click_offset[1]
@@ -604,9 +738,13 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None, account
                          print(f"👆 SEGUNDO: CLICANDO NO CENTRO: ({center_x}, {center_y})")
                          simulate_touch(center_x, center_y, device_id=device_id)
 
-                    if click_delay > 0:
+                    # OTIMIZAÇÃO: No modo otimizado, post_detection_delay JÁ cumpre o papel de click_delay
+                    if not wait_enabled and click_delay > 0:
                          print(f"⏳ Aguardando {click_delay}s após o clique...")
                          time.sleep(click_delay)
+                    elif wait_enabled:
+                         print(f"⚡ Modo otimizado: click_delay ignorado (post_detection_delay já aplicado)")
+                    
                     # Log de sucesso melhorado para scroll_then_click
                     account_info = f" - Conta: {account_name}" if account_name else ""
                     print(f"🎉 SUCESSO [Passo {step_number}] - Template: {os.path.basename(template_path)} - Acao: {action_name}{account_info}")
@@ -762,8 +900,13 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None, account
         
         print("=" * 50)
         
-        # Delay condicional: menor para pegar_recursos (recursos já visíveis após scroll)
-        if action_name == "pegar_recursos":
+        # OTIMIZAÇÃO: Delay entre passos reduzido no modo otimizado
+        # No modo otimizado, wait_for_template já gerencia a espera necessária
+        if step_type == "template" and wait_enabled:
+            # Modo otimizado: delay mínimo apenas para estabilidade
+            print("⚡ Modo otimizado: delay entre passos reduzido (0.1s)")
+            time.sleep(0.1)
+        elif action_name == "pegar_recursos":
             print("⏳ Aguardando 0.5 segundos antes do próximo passo...")
             time.sleep(0.5)  # Delay reduzido para recursos já visíveis
         else:

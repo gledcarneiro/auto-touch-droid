@@ -14,7 +14,11 @@
             "action_after_find": null,
             "max_attempts": 5,
             "attempt_delay": 1.0,
-            "initial_delay": 2.0
+            "initial_delay": 2.0,
+            "wait_for_template": true,
+            "wait_timeout": 3,
+            "wait_interval": 0.2,
+            "post_detection_delay": 0.5
         },
         {
             "name": "Passo 2: Template 02_conta.png",
@@ -26,7 +30,11 @@
             "action_after_find": null,
             "max_attempts": 5,
             "attempt_delay": 1.0,
-            "initial_delay": 2.0
+            "initial_delay": 2.0,
+            "wait_for_template": true,
+            "wait_timeout": 3,
+            "wait_interval": 0.2,
+            "post_detection_delay": 0.5
         },
         {
             "name": "Passo 3: Template 03_desconectar.png",
@@ -38,7 +46,11 @@
             "action_after_find": null,
             "max_attempts": 5,
             "attempt_delay": 1.0,
-            "initial_delay": 2.0
+            "initial_delay": 2.0,
+            "wait_for_template": true,
+            "wait_timeout": 3,
+            "wait_interval": 0.2,
+            "post_detection_delay": 0.5
         }
     ]
 }
