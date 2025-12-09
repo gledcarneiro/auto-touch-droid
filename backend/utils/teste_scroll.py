@@ -101,14 +101,14 @@ def navegar_para_lista_rallys(rally_sequence):
     """Navega para a lista de rallys (Aliança -> Batalha)."""
     print("\n🧭 Navegando para a Lista de Rallys...")
     
-    print("1️⃣ Clicando em 'Aliança' (01_alianca.png)...")
+    # print("1️⃣ Clicando em 'Aliança' (01_alianca.png)...")
     if execultar_acoes(RALLY_ACTION_NAME, device_id=DEVICE_ID, account_name="current", sequence_override=[rally_sequence[0]]):
-        print("✅ 'Aliança' clicado.")
+        # print("✅ 'Aliança' clicado.")
         time.sleep(0.8)
         
-        print("2️⃣ Clicando em 'Batalha' (02_batalha.png)...")
+        # print("2️⃣ Clicando em 'Batalha' (02_batalha.png)...")
         if execultar_acoes(RALLY_ACTION_NAME, device_id=DEVICE_ID, account_name="current", sequence_override=[rally_sequence[1]]):
-            print("✅ 'Batalha' clicado. Estamos na lista.")
+            # print("✅ 'Batalha' clicado. Estamos na lista.")
             time.sleep(1.5)
             return True
         else:

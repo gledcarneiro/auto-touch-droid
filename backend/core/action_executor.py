@@ -88,7 +88,7 @@ def wait_for_template(template_path, device_id=None, screenshot_path="temp_scree
         
         if result:
             elapsed = time.time() - start_time
-            print(f"✅ Template encontrado em {attempts} tentativas ({elapsed:.2f}s)")
+            # print(f"✅ Template encontrado em {attempts} tentativas ({elapsed:.2f}s)")
             
             # NÃO aplicar delay aqui - será aplicado DEPOIS de extrair coordenadas
             # para garantir que o clique aconteça na posição correta após animação
@@ -135,8 +135,8 @@ def capturar_posicao_login_cav_dinamica(device_id=None):
             center_x = template_x + template_w // 2
             center_y = template_y + template_h // 2
             
-            print(f"🎯 POSIÇÃO DINÂMICA DO LOGIN_CAV: Template encontrado em ({template_x}, {template_y})")
-            print(f"🎯 COORDENADAS DO CENTRO: ({center_x}, {center_y})")
+            # print(f"🎯 POSIÇÃO DINÂMICA DO LOGIN_CAV: Template encontrado em ({template_x}, {template_y})")
+            # print(f"🎯 COORDENADAS DO CENTRO: ({center_x}, {center_y})")
             
             # Limpar screenshot temporário
             if os.path.exists(screenshot_path):
@@ -244,7 +244,7 @@ def simulate_scroll(device_id=None, direction="up", duration_ms=500, start_coord
         # Usar coordenadas fornecidas
         final_start_x, final_start_y = start_coords
         final_end_x, final_end_y = end_coords
-        print(f"Simulando scroll de coordenadas específicas: ({final_start_x}, {final_start_y}) para ({final_end_x}, {final_end_y})")
+        # print(f"Simulando scroll de coordenadas específicas: ({final_start_x}, {final_start_y}) para ({final_end_x}, {final_end_y})")
     else:
         # Usar coordenadas genéricas baseadas na direção (Landscape 2400x1080)
         landscape_width = 2400  # Largura em modo paisagem
@@ -255,12 +255,12 @@ def simulate_scroll(device_id=None, direction="up", duration_ms=500, start_coord
             # Scroll para cima (conteúdo sobe): Gesto de baixo para cima na tela landscape.
             final_start_x, final_start_y = center_x_landscape, int(landscape_height * 0.75)  # Ajustado de 0.8 para 0.75
             final_end_x, final_end_y = center_x_landscape, int(landscape_height * 0.25)      # Ajustado de 0.2 para 0.25
-            print(f"Simulando scroll genérico OTIMIZADO na direção 'up'.")
+            # print(f"Simulando scroll genérico OTIMIZADO na direção 'up'.")
         elif direction == "down":
             # Scroll para baixo (conteúdo desce): Gesto de cima para baixo na tela landscape.
             final_start_x, final_start_y = center_x_landscape, int(landscape_height * 0.25)  # Ajustado de 0.2 para 0.25
             final_end_x, final_end_y = center_x_landscape, int(landscape_height * 0.75)      # Ajustado de 0.8 para 0.75
-            print(f"Simulando scroll genérico OTIMIZADO na direção 'down'.")
+            # print(f"Simulando scroll genérico OTIMIZADO na direção 'down'.")
         else:
             print(f"Aviso: Direção de scroll '{direction}' desconhecida e coordenadas não fornecidas. Pulando scroll.")
             return # Não executa o scroll se a configuração for inválida
@@ -271,11 +271,11 @@ def simulate_scroll(device_id=None, direction="up", duration_ms=500, start_coord
     # input swipe <x1> <y1> <x2> <y2> [duration_ms]
     command.extend(["shell", "input", "swipe", str(final_start_x), str(final_start_y), str(final_end_x), str(final_end_y), str(duration_ms)])
 
-    print(f"DEBUG simulate_scroll command: {' '.join(command)}")
+    print(f"⚠️  Scroll simulado no dispositivo {device_id} iniciando em {final_start_x}, {final_start_y} para {final_end_x}, {final_end_y} em {duration_ms}ms")
 
     try:
         result = subprocess.run(command, check=True, capture_output=True, text=True, timeout=(duration_ms / 1000.0) + 5) # Timeout um pouco maior que a duração do swipe
-        print("Scroll simulado com sucesso.")
+        # print("Scroll simulado com sucesso.")
         # print(f"DEBUG simulate_scroll stdout: {result.stdout.strip()}") # Comentado para evitar muita verbosidade
         # print(f"DEBUG simulate_scroll stderr: {result.stderr.strip()}") # Comentado para evitar muita verbosidade
 
@@ -308,11 +308,11 @@ def find_and_optionally_click(template_path, device_id=None, screenshot_path="te
         tuple: Retorna (True, (center_x, center_y)) se a imagem foi encontrada,
                (False, None) caso contrário. As coordenadas são None se não for encontrada.
     """
-    print(f"Procurando template: {os.path.basename(template_path)}") # Printa só o nome do arquivo
+    # print(f"Procurando template: {os.path.basename(template_path)}") # Printa só o nome do arquivo
 
     # Adicionar um atraso antes da primeira tentativa
     if initial_delay > 0:
-        print(f"Aguardando {initial_delay} segundos antes da primeira tentativa...")
+        # print(f"Aguardando {initial_delay} segundos antes da primeira tentativa...")
         time.sleep(initial_delay)
 
     # Ensure the directory for the temp screenshot exists
@@ -327,12 +327,15 @@ def find_and_optionally_click(template_path, device_id=None, screenshot_path="te
 
 
     found_position = None # Initialize found_position outside the loop
-
+    mostra_tentativas = False
     for attempt in range(1, max_attempts + 1):
-        print(f"Tentativa {attempt}/{max_attempts} para encontrar o template '{os.path.basename(template_path)}'.")
+        if mostra_tentativas:
+            print(f"Tentativa {attempt}/{max_attempts} para encontrar o template '{os.path.basename(template_path)}'.")
+            mostra_tentativas = False
 
         # 1. Capturar a tela
         if not capture_screen(device_id=device_id, output_path=screenshot_path):
+            mostra_tentativas = True
             print(f"Falha ao capturar a tela na tentativa {attempt}. ")
             # Clean up temp screenshot if capture failed and left a file
             if os.path.exists(screenshot_path):
@@ -370,7 +373,7 @@ def find_and_optionally_click(template_path, device_id=None, screenshot_path="te
             center_x = x + w // 2
             center_y = y + h // 2
             found_position = (True, (center_x, center_y))
-            print(f"Template '{os.path.basename(template_path)}' encontrado na tentativa {attempt} em ({x}, {y}).")
+            # print(f"Template '{os.path.basename(template_path)}' encontrado na tentativa {attempt} em ({x}, {y}).")
             break # Sai do loop de tentativas se encontrar
 
         else:
@@ -389,7 +392,7 @@ def find_and_optionally_click(template_path, device_id=None, screenshot_path="te
         return (False, None) # Retorna False se o template não foi encontrado após todas as tentativas
 
 
-def execultar_acoes(action_name, device_id=None, sequence_override=None, account_name=None):
+def execultar_acoes(action_name, device_id=None, sequence_override=None, account_name=None, fila_atual=None):
     """
     Executa uma sequência de ações lidas de um arquivo sequence.json
     na pasta da ação, onde cada item no JSON define um passo
@@ -424,7 +427,7 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None, account
     if sequence_override is not None:
         # Usar a sequência fornecida diretamente
         action_sequence = sequence_override
-        print(f"Executando sequência de ações fornecida por override ({len(action_sequence)} passos).")
+        # print(f"Executando sequência de ações fornecida por override ({len(action_sequence)} passos).")
         # When using override, success_image_config is not loaded from the overridden sequence JSON.
         # If success image check is needed, it must be handled by the caller (e.g., execute_login_for_account)
         # or the success config must be passed separately.
@@ -483,7 +486,7 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None, account
             return False # Retorna False em caso de outros erros
 
 
-    print(f"\nExecutando a ação: {action_name}")
+    # print(f"\nExecutando a ação: {action_name}")
 
     # Se houver uma imagem de sucesso configurada para esta ação, preparamos para verificá-la.
     # Esta parte agora é carregada DENTRO do bloco try/except de carregamento do JSON.
@@ -506,14 +509,14 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None, account
     # para que ela funcione SOMENTE quando success_image_config for carregada do arquivo (ou seja, sequence_override is None)
 
     # --- Lógica de execução dos passos ---
-    print(f"\n🚀 INICIANDO EXECUÇÃO DA AÇÃO: '{action_name}' ({len(action_sequence)} passos)")
-    print("=" * 60)
+    # print(f"\n🚀 INICIANDO EXECUÇÃO DA AÇÃO: '{action_name}' ({len(action_sequence)} passos)")
+    # print("=" * 60)
     
     for i, step_config in enumerate(action_sequence):
         step_number = i + 1
         step_name = step_config.get("name", f"Passo {step_number}") # Usar nome do JSON ou default
 
-        print(f"\n🎯 PASSO {step_number}/{len(action_sequence)}: {step_name}")
+        # print(f"\n🎯 PASSO {step_number}/{len(action_sequence)}: {step_name}")
         
         # Criar log melhorado com informações de ação e conta
         account_info = f" - Conta: {account_name}" if account_name else ""
@@ -522,8 +525,8 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None, account
             template_filename = step_config.get("template_file", "N/A")
             template_info = f" - Template: {template_filename}"
         
-        print(f"▶️  EXECUTANDO AGORA: [Passo {step_number}]{template_info} - Acao: {action_name}{account_info}")
-        print("-" * 40)
+        print(f"\n{fila_atual} - Acao: {action_name} {step_name}")
+        # print("-" * 40)
 
         step_type = step_config.get("type")
 
@@ -602,8 +605,7 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None, account
             
             if wait_enabled:
                 # ========== MODO OTIMIZADO: wait_for_template ==========
-                print(f"🚀 MODO OTIMIZADO ATIVADO")
-                print(f"🔍 PROCURANDO TEMPLATE: {template_filename}")
+                print(f"🔍 PROCURANDO TEMPLATE {template_filename} MODO OTIMIZADO (wait_for_template)")
                 print(f"⏱️  Timeout: {wait_timeout}s | Intervalo: {wait_interval}s | Delay pós-detecção: {post_delay}s")
                 
                 result = wait_for_template(
@@ -626,7 +628,7 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None, account
                     
             else:
                 # ========== MODO TRADICIONAL: find_and_optionally_click ==========
-                print(f"🔍 PROCURANDO TEMPLATE: {template_filename}")
+                print(f"🔍 PROCURANDO TEMPLATE  {template_filename} MODO TRADICIONAL (find_and_optionally_click)")
                 print(f"🎯 Ação ao encontrar: {action_on_found}")
                 print(f"🔄 Máximo de tentativas: {max_attempts}")
                 print(f"⏱️  Delay entre tentativas: {attempt_delay}s")
@@ -634,7 +636,7 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None, account
                 if initial_delay > 0:
                     print(f"⏳ Delay inicial: {initial_delay}s")
                 
-                print("🔎 Iniciando busca na tela...")
+                # print("🔎 Iniciando busca na tela...")
                 
                 # Usando a função find_and_optionally_click que inclui tentativas e atraso inicial
                 found, coords = find_and_optionally_click(
@@ -646,14 +648,14 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None, account
                 )
 
             if found:
-                print(f"✅ TEMPLATE ENCONTRADO! Coordenadas: {coords}")
+                # print(f"✅ TEMPLATE ENCONTRADO! Coordenadas: {coords}")
                 
                 if action_on_found == "click":
                     # Verificar se temos coordenadas forçadas (posicionamento relativo)
                     force_coords = step_config.get('force_click_coords')
                     if force_coords:
                         center_x, center_y = force_coords
-                        print(f"🎯 USANDO COORDENADAS FORÇADAS (posicionamento relativo): ({center_x}, {center_y})")
+                        # print(f"🎯 USANDO COORDENADAS FORÇADAS (posicionamento relativo): ({center_x}, {center_y})")
                     else:
                         # Se o template foi encontrado, simulamos o clique usando as coordenadas retornadas
                         center_x, center_y = coords
@@ -669,8 +671,8 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None, account
                     if isinstance(click_offset, list) and len(click_offset) == 2:
                          final_click_x = center_x + click_offset[0]
                          final_click_y = center_y + click_offset[1]
-                         print(f"🎯 Aplicando offset [{click_offset[0]}, {click_offset[1]}]")
-                         print(f"👆 CLICANDO EM: ({final_click_x}, {final_click_y})")
+                        #  print(f"🎯 Aplicando offset [{click_offset[0]}, {click_offset[1]}]")
+                        #  print(f"👆 CLICANDO EM: ({final_click_x}, {final_click_y})")
                          simulate_touch(final_click_x, final_click_y, device_id=device_id)
                     else:
                          # Validar se click_offset foi especificado mas não é uma lista de 2 ints
@@ -681,7 +683,7 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None, account
 
                     # OTIMIZAÇÃO: No modo otimizado, post_detection_delay JÁ cumpre o papel de click_delay
                     if not wait_enabled and click_delay > 0:
-                         print(f"⏳ Aguardando {click_delay}s após o clique...")
+                        #  print(f"⏳ Aguardando {click_delay}s após o clique...")
                          time.sleep(click_delay)
                     elif wait_enabled:
                          print(f"⚡ Modo otimizado: click_delay ignorado (post_detection_delay já aplicado)")
@@ -693,7 +695,7 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None, account
                 
                 elif action_on_found == "scroll_then_click":
                     # PRIMEIRO executa o scroll, DEPOIS clica
-                    print(f"🔄 EXECUTANDO: Scroll primeiro, depois clique")
+                    # print(f"🔄 EXECUTANDO: Scroll primeiro, depois clique")
                     
                     # Executar action_after_find ANTES do clique
                     action_after = step_config.get("action_after_find")
@@ -706,7 +708,7 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None, account
                             scroll_start_coords = action_after.get("start_coords")
                             scroll_end_coords = action_after.get("end_coords")
 
-                            print(f"📜 PRIMEIRO: Executando scroll {scroll_direction} por {scroll_duration}ms")
+                            # print(f"📜 PRIMEIRO: Executando scroll {scroll_direction} por {scroll_duration}ms")
                             simulate_scroll(
                                 device_id=device_id,
                                 direction=scroll_direction,
@@ -714,7 +716,7 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None, account
                                 start_coords=scroll_start_coords,
                                 end_coords=scroll_end_coords
                             )
-                            print(f"⏳ Aguardando {delay_after_scroll_after}s após o scroll...")
+                            # print(f"⏳ Aguardando {delay_after_scroll_after}s após o scroll...")
                             time.sleep(delay_after_scroll_after)
                     
                     # AGORA executa o clique
@@ -740,7 +742,7 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None, account
 
                     # OTIMIZAÇÃO: No modo otimizado, post_detection_delay JÁ cumpre o papel de click_delay
                     if not wait_enabled and click_delay > 0:
-                         print(f"⏳ Aguardando {click_delay}s após o clique...")
+                        #  print(f"⏳ Aguardando {click_delay}s após o clique...")
                          time.sleep(click_delay)
                     elif wait_enabled:
                          print(f"⚡ Modo otimizado: click_delay ignorado (post_detection_delay já aplicado)")
@@ -758,11 +760,11 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None, account
                         step_success = False # Considera falha se a ação no template não puder ser executada/reconhecida
 
             else:
-                print(f"❌ FALHA: Template NÃO encontrado!")
-                print(f"🔍 Arquivo procurado: {os.path.basename(template_path)}")
-                print(f"🔄 Tentativas realizadas: {max_attempts}")
-                print(f"⚠️  PASSO FALHOU: {step_name}")
-                print(f"🛑 PARANDO EXECUÇÃO PARA ANÁLISE DO PROBLEMA...")
+                # print(f"❌ FALHA: Template NÃO encontrado!")
+                # print(f"🔍 Arquivo procurado: {os.path.basename(template_path)}")
+                # print(f"🔄 Tentativas realizadas: {max_attempts}")
+                # print(f"⚠️  PASSO FALHOU: {step_name}")
+                # print(f"🛑 PARANDO EXECUÇÃO PARA ANÁLISE DO PROBLEMA...")
                 step_success = False # Passo de template falhou
                 return False  # Para a execução imediatamente
 
@@ -887,30 +889,30 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None, account
         # e colocá-la na execute_login_for_account, que lida com o fluxo de login por conta.
 
         # RESUMO DO PASSO
-        print(f"\n📊 RESUMO DO PASSO {step_number}:")
-        if step_success:
-            print(f"✅ Status: SUCESSO")
-            print(f"🎯 Passo: {step_name}")
-            print(f"🔧 Tipo: {step_type}")
-        else:
-            print(f"❌ Status: FALHA")
-            print(f"⚠️  Passo: {step_name}")
-            print(f"🔧 Tipo: {step_type}")
-            print(f"💡 Verifique se o template existe e está visível na tela!")
+        # print(f"\n📊 RESUMO DO PASSO {step_number}:")
+        # if step_success:
+        #     print(f"✅ Status: SUCESSO")
+        #     print(f"🎯 Passo: {step_name}")
+        #     print(f"🔧 Tipo: {step_type}")
+        # else:
+        #     print(f"❌ Status: FALHA")
+        #     print(f"⚠️  Passo: {step_name}")
+        #     print(f"🔧 Tipo: {step_type}")
+        #     print(f"💡 Verifique se o template existe e está visível na tela!")
         
-        print("=" * 50)
+        # print("=" * 50)
         
         # OTIMIZAÇÃO: Delay entre passos reduzido no modo otimizado
         # No modo otimizado, wait_for_template já gerencia a espera necessária
         if step_type == "template" and wait_enabled:
             # Modo otimizado: delay mínimo apenas para estabilidade
-            print("⚡ Modo otimizado: delay entre passos reduzido (0.1s)")
+            # print("⚡ Modo otimizado: delay entre passos reduzido (0.1s)")
             time.sleep(0.1)
         elif action_name == "pegar_recursos":
-            print("⏳ Aguardando 0.5 segundos antes do próximo passo...")
+            # print("⏳ Aguardando 0.5 segundos antes do próximo passo...")
             time.sleep(0.5)  # Delay reduzido para recursos já visíveis
         else:
-            print("⏳ Aguardando 0.5 segundos antes do próximo passo...")
+            # print("⏳ Aguardando 0.5 segundos antes do próximo passo...")
             time.sleep(0.5)  # Pausa padrão entre passos para observação
         
         # REMOVENDO VERIFICAÇÃO DE SUCESSO DAQUI TEMPORARIAMENTE para simplificar
@@ -929,7 +931,7 @@ def execultar_acoes(action_name, device_id=None, sequence_override=None, account
         # Isso está OK para a maioria dos casos.
 
 
-    print(f"\nExecução da ação '{action_name}' finalizada (chegou ao fim da sequência).")
+    # print(f"\nExecução da ação '{action_name}' finalizada (chegou ao fim da sequência).")
     # Se chegou ao fim da sequência, consideramos a execução bem-sucedida, a menos que um erro tenha ocorrido em um passo.
     # A lógica de retorno True/False agora deve refletir se a sequência terminou SEM um erro crítico em um passo.
     # Se um template NÃO for encontrado, a função já retorna False.
@@ -1045,7 +1047,7 @@ def execute_login_for_account(account_info, original_sequence, device_id=None):
 
 
     # --- Executar a sequência TEMPORÁRIA criada para esta conta ---
-    print(f"\nExecutando sequência temporária para a conta '{account_name}' ({len(modified_sequence_for_execution)} passos):")
+    # print(f"\nExecutando sequência temporária para a conta '{account_name}' ({len(modified_sequence_for_execution)} passos):")
 
     # Chamamos a função execultar_acoes, passando a sequência modificada como override
     # O nome da ação ("fazer_login") ainda é necessário para que execultar_acoes saiba onde encontrar os templates

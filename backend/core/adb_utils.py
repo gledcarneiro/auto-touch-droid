@@ -137,7 +137,7 @@ def capture_screen(device_id=None, output_path="screenshot.png"):
 
     try:
         # Capture to device
-        print("Capturando tela no dispositivo...")
+        # print("Capturando tela no dispositivo...")
         # Timeout for screencap command (e.g., 10 seconds)
         result_screencap = subprocess.run(command_screencap, check=True, capture_output=True, text=True, timeout=10)
         # print(f"screencap stdout: {result_screencap.stdout}") # Comentado para evitar muita verbosidade

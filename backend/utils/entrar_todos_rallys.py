@@ -52,6 +52,7 @@ FLAG_RALLY = True
 GATILHO_TEMPLATE      = os.path.join(project_root, "backend", "actions", "templates", "_global", "prepara_voltar_rally.png")
 TEMPLATE_MATAR_MOBS   = os.path.join(project_root, "backend", "actions", "templates", "_global", "prepara_matar_mobs.png")
 TEMPLATE_BAU_RECURSOS = os.path.join(project_root, "backend", "actions", "templates", "_global", "prepara_pegar_bau_recursos.png")
+TEMPLATE_PREPARA_ENVIAR_TROPAS = os.path.join(project_root, "backend", "actions", "templates", "_global", "prepara_enviar_tropas.png")
 
 # ---------------------------------------------------------------------------
 # Funções Auxiliares
@@ -181,7 +182,7 @@ def clicar_preparacao(template_path, descricao):
 # Lógica de Navegação e Processamento (Rally)
 # ---------------------------------------------------------------------------
 
-def navegar_para_lista_rallys(rally_sequence):
+def navegar_para_lista_rallys(rally_sequence, fila_atual):
     """
     Garante que estamos na tela de lista de rallys (Tela1-Aba).
     Fluxo Padrão: Aliança (01) -> Batalha (02).
@@ -189,14 +190,14 @@ def navegar_para_lista_rallys(rally_sequence):
     print("\n🧭 Navegando para a Lista de Rallys (Fluxo Inicial)...")
     
     # Sempre tentar o fluxo completo para garantir o estado correto
-    print("1️⃣ Clicando em 'Aliança' (01_alianca.png)...")
-    if execultar_acoes(RALLY_ACTION_NAME, device_id=DEVICE_ID, account_name="current", sequence_override=[rally_sequence[0]]):
+    print("1️⃣  Clicando em 'Aliança' (01_alianca.png)...")
+    if execultar_acoes(RALLY_ACTION_NAME, device_id=DEVICE_ID, account_name="current", sequence_override=[rally_sequence[0]], fila_atual=fila_atual):
         print("✅ 'Aliança' clicado.")
         time.sleep(0.8)
         
-        print("2️⃣ Clicando em 'Batalha' (02_batalha.png)...")
-        if execultar_acoes(RALLY_ACTION_NAME, device_id=DEVICE_ID, account_name="current", sequence_override=[rally_sequence[1]]):
-            print("✅ 'Batalha' clicado. Estamos na lista.")
+        # print("2️⃣ Clicando em 'Batalha' (02_batalha.png)...")
+        if execultar_acoes(RALLY_ACTION_NAME, device_id=DEVICE_ID, account_name="current", sequence_override=[rally_sequence[1]], fila_atual=fila_atual):
+            # print("✅ 'Batalha' clicado. Estamos na lista.")
             time.sleep(1.5)
             return True
         else:
@@ -206,11 +207,11 @@ def navegar_para_lista_rallys(rally_sequence):
     
     return False
 
-def processar_fila(fila_num, rally_sequence, scroll_config):
+def processar_fila(fila_num, rally_sequence, scroll_config, fila_atual):
     """
     Processa uma única fila.
     """
-    print(f"\n🎯 [Fila {fila_num}] Iniciando processamento...")
+    # print(f"\n🎯 [Fila {fila_num}] Iniciando processamento...")
     
     # 1. SCROLL (se necessário) - USA CONFIGURAÇÕES DO JSON
     if fila_num >= 4:
@@ -234,11 +235,11 @@ def processar_fila(fila_num, rally_sequence, scroll_config):
         
         end_y = start_y - row_height
         
-        print(f"📜 Scroll Config para Fila {fila_num}:")
-        print(f"   • Scrolls: {num_scrolls}x")
-        print(f"   • Distância: {row_height}px (Y: {start_y} → {end_y})")
-        print(f"   • Duração: {scroll_duration}ms")
-        print(f"   • Posição X: {center_x}")
+        # print(f"📜 Scroll Config para Fila {fila_num}:")
+        # print(f"   • Scrolls: {num_scrolls}x")
+        # print(f"   • Distância: {row_height}px (Y: {start_y} → {end_y})")
+        # print(f"   • Duração: {scroll_duration}ms")
+        # print(f"   • Posição X: {center_x}")
         
         try:
             for i in range(num_scrolls):
@@ -270,8 +271,8 @@ def processar_fila(fila_num, rally_sequence, scroll_config):
     click_x = center_x
     click_y = center_y + offset_y
     
-    print(f"📍 Template encontrado em ({x}, {y}) | Centro: ({center_x}, {center_y})")
-    print(f"👆 Clicando na Fila {fila_num} -> Centro Y ({center_y}) + Offset ({offset_y}) = {click_y}")
+    # print(f"📍 Template encontrado em ({x}, {y}) | Centro: ({center_x}, {center_y})")
+    # print(f"👆 Clicando na Fila {fila_num} -> Centro Y ({center_y}) + Offset ({offset_y}) = {click_y}")
     
     # Debug Visual
     try:
@@ -285,7 +286,7 @@ def processar_fila(fila_num, rally_sequence, scroll_config):
             
             debug_filename = os.path.join(project_root, "temp_screenshots", f"debug_click_fila_{fila_num}.png")
             cv2.imwrite(debug_filename, debug_img)
-            print(f"🖼️ Debug salvo: {debug_filename}")
+            print(f"🖼️  Debug salvo: {debug_filename}")
     except Exception as e:
         print(f"⚠️ Erro ao salvar debug visual: {e}")
 
@@ -295,23 +296,32 @@ def processar_fila(fila_num, rally_sequence, scroll_config):
     
     # 3. CLICAR EM JUNTAR
     print("🔘 Clicando em 'Juntar'...")
-    if not execultar_acoes(RALLY_ACTION_NAME, device_id=DEVICE_ID, account_name="current", sequence_override=[rally_sequence[3]]):
-        print("⚠️ Botão 'Juntar' não encontrado = NÃO HÁ RALLY DISPONÍVEL nesta posição.")
+    if not execultar_acoes(RALLY_ACTION_NAME, device_id=DEVICE_ID, account_name="current", sequence_override=[rally_sequence[3]], fila_atual=fila_atual):
+        print("⚠️ Botão 'Juntar' não encontrado = VEL nesta posição.")
         print("🔙 Voltando para lista (1x BACK)...")
         execute_back(times=1)
         return 'NO_RALLY'
     
     # 4. CLICAR EM TROPAS
     print("💥 Clicando em 'Tropas'...")
-    if not execultar_acoes(RALLY_ACTION_NAME, device_id=DEVICE_ID, account_name="current", sequence_override=[rally_sequence[4]]):
+    if not execultar_acoes(RALLY_ACTION_NAME, device_id=DEVICE_ID, account_name="current", sequence_override=[rally_sequence[4]], fila_atual=fila_atual):
         print("⚠️ 'Tropas' não disponível = JÁ PARTICIPOU deste rally.")
         print("🔙 Voltando para lista (1x BACK)...")
         execute_back(times=1)
         return 'NEXT'
     
-    # 5. CLICAR EM MARCHAR
-    print("⚔️ Clicando em 'Marchar'...")
-    if execultar_acoes(RALLY_ACTION_NAME, device_id=DEVICE_ID, account_name="current", sequence_override=[rally_sequence[5]]):
+    # 5. VERIFICAR E CLICAR EM MARCHAR
+    print("🛡️ Verificando segurança (prepara_enviar_tropas.png)...")
+    screenshot_secure = os.path.join(project_root, "temp_screenshots", "temp_secure_march.png")
+    capture_screen(DEVICE_ID, screenshot_secure)
+    
+    if find_image_on_screen(screenshot_secure, TEMPLATE_PREPARA_ENVIAR_TROPAS) is None:
+        print("⛔ Template 'prepara_enviar_tropas.png' NÃO encontrado. Abortando marchar!")
+        # Retorna ERROR para que o loop principal faça o reset (back 5x)
+        return 'ERROR'
+
+    print("⚔️ Segurança OK. Clicando em 'Marchar'...")
+    if execultar_acoes(RALLY_ACTION_NAME, device_id=DEVICE_ID, account_name="current", sequence_override=[rally_sequence[5]], fila_atual=fila_atual):
         print("✅ SUCESSO! Marcha enviada.")
         return 'MARCHED'
     else:
@@ -322,7 +332,7 @@ def processar_fila(fila_num, rally_sequence, scroll_config):
 # Tarefas Secundárias (com verificação de gatilho integrada)
 # ---------------------------------------------------------------------------
 
-def executar_com_gatilho(action_name, step_index, sequence):
+def executar_com_gatilho(action_name, step_index, sequence, mob_number=""):
     """
     Executa um passo de uma ação, mas ANTES verifica o gatilho.
     Retorna True se o gatilho foi detectado (interrompe), False caso contrário.
@@ -339,7 +349,7 @@ def executar_com_gatilho(action_name, step_index, sequence):
         return True  # Gatilho detectado, interrompe
     
     # Se não detectou, executa o passo normalmente
-    execultar_acoes(action_name, device_id=DEVICE_ID, account_name="current", sequence_override=[sequence[step_index]])
+    execultar_acoes(action_name, device_id=DEVICE_ID, account_name="current", sequence_override=[sequence[step_index]], fila_atual=mob_number)
     return False  # Continua normalmente
 
 def executar_tarefas_secundarias():
@@ -363,12 +373,13 @@ def executar_tarefas_secundarias():
     clicar_preparacao(TEMPLATE_BAU_RECURSOS, "Ícone Prepara Baú/Recursos")
     
     print("\n📦 [TAREFA 1/3] Executando: pegar_bau...")
-    print("\n📦 [TAREFA 1/3] Executando: pegar_bau...")
     bau_sequence = load_sequence("pegar_bau")
     if bau_sequence:
         for i in range(len(bau_sequence)):
-            if executar_com_gatilho("pegar_bau", i, bau_sequence):
+            acao_atual = f"📦 Pegando baú #{i}"
+            if executar_com_gatilho("pegar_bau", i, bau_sequence, acao_atual):
                 print("🚨 Gatilho detectado durante pegar_bau! Abortando tarefas secundárias.")
+                execute_back(times=5)
                 return
             time.sleep(0.5)
         print("✅ pegar_bau concluído.")
@@ -384,8 +395,10 @@ def executar_tarefas_secundarias():
     recursos_sequence = load_sequence("pegar_recursos")
     if recursos_sequence:
         for i in range(len(recursos_sequence)):
-            if executar_com_gatilho("pegar_recursos", i, recursos_sequence):
+            acao_atual = f"🌾 Pegando recursos #{i}"
+            if executar_com_gatilho("pegar_recursos", i, recursos_sequence, acao_atual):
                 print("🚨 Gatilho detectado durante pegar_recursos! Abortando tarefas secundárias.")
+                execute_back(times=5)
                 return
         print("✅ pegar_recursos concluído.")
     else:
@@ -405,11 +418,12 @@ def executar_tarefas_secundarias():
         ciclo_mob = 0
         while not FLAG_RALLY:
             ciclo_mob += 1
-            print(f"\n🗡️ Ciclo de Mob #{ciclo_mob}")
+            acao_atual = f"⚔️ Matando Mob #{ciclo_mob}"
             
             for i in range(len(mobs_sequence)):
-                if executar_com_gatilho("matar_mobs", i, mobs_sequence):
+                if executar_com_gatilho("matar_mobs", i, mobs_sequence, acao_atual):
                     print("🚨 Gatilho detectado durante matar_mobs! Voltando para Rallies.")
+                    execute_back(times=5)
                     return
                 
                 # Lógica injetada: Clique no centro após '01_buscar.png'
@@ -428,7 +442,7 @@ def executar_tarefas_secundarias():
                     click_y = 550
                     
                     # Debug Visual ANTES do clique (captura a tela atual)
-                    print(f"ℹ️ [Injeção] Preparando clique no centro da tela ({click_x}, {click_y})...")
+                    # print(f"ℹ️ [Injeção] Preparando clique no centro da tela ({click_x}, {click_y})...")
                     try:
                         import cv2
                         screenshot_path = os.path.join(project_root, "temp_screenshots", "temp_screenshot_rally.png")
@@ -505,14 +519,15 @@ def main():
             
             # Loop de Filas (1-9) - NUNCA PARA NO MEIO
             for fila in range(1, MAX_FILAS + 1):
+                fila_atual = f"⚔️  Fila {fila}/{MAX_FILAS}"
                 print(f"\n{'='*60}")
-                print(f"🎯 Processando Fila {fila}/{MAX_FILAS}")
+                print(f"🎯 Iniciando processo na {fila_atual}")
                 print(f"{'='*60}")
                 
                 # NAVEGAÇÃO ANTES DE CADA FILA (Aliança → Batalha)
                 # OTIMIZAÇÃO: Pula navegação se já estamos na lista (após falha no Passo 5)
                 if not jah_na_lista:
-                    if not navegar_para_lista_rallys(rally_sequence):
+                    if not navegar_para_lista_rallys(rally_sequence, fila_atual=fila_atual):
                         print("🔙 Falha na navegação. Resetando (5x BACK)...")
                         execute_back(times=5)
                         time.sleep(1.0)
@@ -523,22 +538,16 @@ def main():
                     jah_na_lista = False  # Reset flag para próxima iteração
                 
                 # PROCESSAR FILA
-                status = processar_fila(fila, rally_sequence, scroll_config)
+                status = processar_fila(fila, rally_sequence, scroll_config, fila_atual)
                 
                 # Tratamento de status
                 if status == 'REFRESH':
-                    if fila == 1 and primeiro_ciclo:
-                        # Primeira fila do primeiro ciclo não encontrada = lista vazia
-                        print("⚠️ Lista de rallies vazia (primeiro ciclo). Entrando em modo IDLE...")
-                        FLAG_RALLY = False
-                        break
-                    else:
-                        # Fila não encontrada, mas continua para próxima
-                        print(f"⚠️ Fila {fila} não encontrada. Continuando para próxima...")
-                        execute_back(times=2)  # Volta para garantir estado limpo
-                        time.sleep(0.5)
-                        jah_na_lista = False  # Reset flag
-                        continue
+                    # Fila não encontrada, mas continua para próxima
+                    print(f"⚠️ Fila {fila} não encontrada. Continuando para próxima...")
+                    execute_back(times=2)  # Volta para garantir estado limpo
+                    time.sleep(0.5)
+                    jah_na_lista = False  # Reset flag
+                    continue
                         
                 elif status == 'MARCHED':
                     rallies_joined += 1
@@ -549,11 +558,20 @@ def main():
                     continue
                     
                 elif status == 'NO_RALLY':
-                    # Filas sem rally = Fim da lista (não entra em IDLE!)
-                    # Botão "Juntar" sempre aparece (mesmo desabilitado)
-                    # IDLE só acontece quando template 03_fila.png não é encontrado (REFRESH)
-                    print(f"🔄 Fim da lista de rallies (fila {fila} vazia). Encerrando ciclo...")
-                    break
+                    # Filas sem rally = Fim da lista
+                    # Se for a fila 1 e start inicial (ou resetado) -> IDLE
+                    if fila == 1 and primeiro_ciclo:
+                        print("⚠️ Lista de rallies vazia (primeiro ciclo). Entrando em modo IDLE...")
+                        FLAG_RALLY = False
+                        break
+                    else:
+                        # Se encontrou NO_RALLY no meio da lista ou em ciclos subsequentes:
+                        # Habilita 'primeiro_ciclo' para que a próxima verificação na fila 1 possa ativar o IDLE
+                        print(f"🔄 Fim da lista de rallies (fila {fila} vazia). Reiniciando ciclo...")
+                        execute_back(times=5)
+                        primeiro_ciclo = True 
+                        fila = 1
+                        break
                         
                 elif status == 'NEXT':
                     print(f"➡️ Fila {fila} já participada. Próxima fila...")
@@ -575,10 +593,10 @@ def main():
                 continue
             
             # Relatório do ciclo
-            print("\n" + "="*80)
-            print(f"📊 CICLO COMPLETO: {rallies_joined} rallies participados")
-            print("🔄 Iniciando Loop de Segurança (varredura infinita)...")
-            print("="*80)
+            # print("\n" + "="*80)
+            # print(f"📊 CICLO COMPLETO: {rallies_joined} rallies participados")
+            # print("🔄 Iniciando Loop de Segurança (varredura infinita)...")
+            # print("="*80)
             
             time.sleep(2.0)  # Pequena pausa entre ciclos
         
