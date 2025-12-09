@@ -30,6 +30,9 @@ flask==3.0.3
 flask-cors==4.0.1
 flask-socketio==5.3.6
 python-socketio==5.11.3
+fastapi==0.109.0
+uvicorn==0.27.0
+python-multipart==0.0.6
 
 # ============================================================================
 # Testing and Quality Assurance
