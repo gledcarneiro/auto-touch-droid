@@ -145,16 +145,7 @@ export default function App() {
     }
   };
 
-  const checkApiHealth = async () => {
-    try {
-      const base = getBaseFromApiUrl();
-      const healthUrl = `${base}/health`;
-      const res = await axios.get(healthUrl);
-      Alert.alert('Backend', `Status: ${res.data.status} | ${healthUrl}`);
-    } catch (e) {
-      Alert.alert('Backend', `Falha ao conectar: ${e.message}`);
-    }
-  };
+  
 
   return (
     <View style={styles.container}>
@@ -195,15 +186,7 @@ export default function App() {
           </Pressable>
         ))}
       </ScrollView>
-      <TextInput
-        style={styles.input}
-        placeholder="API URL (ex: http://127.0.0.1:8000/start_action)"
-        value={apiUrl}
-        onChangeText={setApiUrl}
-      />
-
-      <Button title="Testar Conexão" onPress={checkApiHealth} />
-      <Button title="Usar URL Padrão" onPress={() => setApiUrl(`${DEFAULT_BASE}/start_action`)} />
+      
 
       <View style={styles.timerRow}>
         <Text style={styles.selectorTitle}>Timer (s)</Text>
@@ -214,7 +197,9 @@ export default function App() {
         </View>
       </View>
       {countdown > 0 && <Text>Alternar para o jogo em: {countdown.toFixed(1)}s</Text>}
-      <Button title={`Iniciar Ação: ${actionName}`} onPress={startAutomationAction} disabled={loading} />
+      <Pressable onPress={startAutomationAction} disabled={loading} style={[styles.primaryActionButton, loading && { opacity: 0.6 }]}> 
+        <Text style={styles.primaryActionText}>Iniciar Ação: {actionName}</Text>
+      </Pressable>
       
       {loading && <ActivityIndicator size="large" color="#0000ff" style={styles.loadingIndicator} />}
       {loading && (
@@ -341,5 +326,19 @@ const styles = StyleSheet.create({
     width: 60,
     textAlign: 'center',
     fontSize: 16,
+  },
+  primaryActionButton: {
+    width: '100%',
+    backgroundColor: '#1E90FF',
+    paddingVertical: 18,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+  },
+  primaryActionText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
 });
