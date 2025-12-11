@@ -12,9 +12,9 @@ import platform
 import subprocess
 
 # Importações de módulos locais
-from core.adb_utils import capture_screen, simulate_touch
-from core.action_executor import simulate_scroll
-from core.image_detection import find_image_on_screen # Reutilizando se necessário, ou mantendo a lógica aqui
+from ..core.adb_utils import capture_screen, simulate_touch
+from ..core.action_executor import simulate_scroll
+from ..core.image_detection import find_image_on_screen # Reutilizando se necessário, ou mantendo a lógica aqui
 
 # Setup Logging
 _BASE_DIR_FOR_LOG = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
