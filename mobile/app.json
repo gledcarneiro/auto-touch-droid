@@ -1,0 +1,17 @@
+{
+  "expo": {
+    "name": "MobilePoC",
+    "slug": "mobile-poc",
+    "version": "1.0.0",
+    "sdkVersion": "51.0.0",
+    "platforms": ["android", "web"],
+    "entryPoint": "index.js",
+    "orientation": "portrait",
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "android": {
+      "package": "com.gledweb.mobilepoc"
+    }
+  }
+}

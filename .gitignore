@@ -137,3 +137,12 @@ temp_screenshots/
 
 # Auto Touch Droid - Screenshots temporários
 backend/temp_*.png
+
+# Mobile Project
+node_modules/
+.expo/
+web-build/
+dist/
+build/
+*.apk
+*.aab

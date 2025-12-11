@@ -1,11 +1,14 @@
 services:
   - type: web
-    name: auto-touch-droid-api
+    name: auto-touch-droid-lok-api
     env: python
     region: oregon
+    rootDir: mobile/api # Adicionado para apontar para a API correta
     plan: free
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn backend.api.main:app --host 0.0.0.0 --port $PORT
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    numInstances: 1
     envVars:
       - key: PYTHON_VERSION
         value: 3.10.12
