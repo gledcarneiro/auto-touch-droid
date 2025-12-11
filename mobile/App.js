@@ -1,7 +1,11 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { View, Text, TextInput, Pressable, FlatList, ActivityIndicator, SafeAreaView } from 'react-native';
 
-const defaultApi = 'http://localhost:8000';
+const defaultApiLocal = 'http://localhost:8000';
+const defaultApiRender = 'https://auto-touch-droid-lok-api.onrender.com';
+
+// Alterne entre defaultApiLocal e defaultApiRender conforme necessário
+const defaultApi = defaultApiRender;
 
 export default function App() {
   const [apiUrl, setApiUrl] = useState(defaultApi);
@@ -100,14 +104,35 @@ export default function App() {
     <SafeAreaView style={{ flex: 1, padding: 16 }}>
       <Text style={{ fontSize: 18, fontWeight: 'bold', marginBottom: 8 }}>Mobile PoC</Text>
 
-      <Text style={{ marginBottom: 4 }}>API URL</Text>
-      <TextInput
-        value={apiUrl}
-        onChangeText={setApiUrl}
-        autoCapitalize="none"
-        autoCorrect={false}
-        style={{ borderWidth: 1, borderColor: '#ccc', padding: 10, borderRadius: 6, marginBottom: 12 }}
-      />
+      <Text style={{ marginBottom: 4 }}>Selecionar API</Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-around', marginBottom: 12 }}>
+        <Pressable
+          onPress={() => setApiUrl(defaultApiLocal)}
+          style={{
+            backgroundColor: apiUrl === defaultApiLocal ? '#1E90FF' : '#f0f0f0',
+            padding: 10,
+            borderRadius: 6,
+            flex: 1,
+            marginRight: 5,
+            alignItems: 'center',
+          }}
+        >
+          <Text style={{ color: apiUrl === defaultApiLocal ? '#fff' : '#000' }}>Local</Text>
+        </Pressable>
+        <Pressable
+          onPress={() => setApiUrl(defaultApiRender)}
+          style={{
+            backgroundColor: apiUrl === defaultApiRender ? '#1E90FF' : '#f0f0f0',
+            padding: 10,
+            borderRadius: 6,
+            flex: 1,
+            marginLeft: 5,
+            alignItems: 'center',
+          }}
+        >
+          <Text style={{ color: apiUrl === defaultApiRender ? '#fff' : '#000' }}>Render</Text>
+        </Pressable>
+      </View>
 
       {loading ? <ActivityIndicator /> : (
         <View style={{ marginBottom: 12 }}>
