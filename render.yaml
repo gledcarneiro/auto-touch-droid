@@ -5,7 +5,7 @@ services:
     region: oregon
     rootDir: mobile/api # Adicionado para apontar para a API correta
     plan: free
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install -r ../requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     numInstances: 1
