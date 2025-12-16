@@ -77,6 +77,15 @@ OFFSETS_FIXOS = {
 }
 OFFSET_CLICK_APOS_SCROLL = 650
 
+# Configurações de Login com Template Fixo
+TEMPLATE_PREPARA_TELA_LOGIN = os.path.join(backend_dir, "actions", "templates", "_global", "prepara_tela_login.png")
+LOGIN_OFFSETS_FIXOS = {
+    1: 140,
+    2: 360,
+    3: 590
+}
+LOGIN_OFFSET_CLICK_APOS_SCROLL = 650
+
 # Delays otimizados (reduzidos ao mínimo seguro)
 DELAY_APOS_LOGIN = 2  # Reduzido de 3 para 2
 DELAY_ENTRE_ACOES = 1  # Reduzido de 2 para 1
@@ -154,6 +163,19 @@ def load_scroll_config():
         return {}
 
 
+def load_login_scroll_config():
+    """Carrega configurações de scroll de login do JSON."""
+    config_path = os.path.join(current_dir, "login_scroll_config.json")
+    try:
+        with open(config_path, "r", encoding="utf-8") as f:
+            config = json.load(f)
+        return config.get("accounts", {})
+    except Exception as e:
+        print(f"⚠️ Erro ao carregar login_scroll_config.json: {e}")
+        print("⚠️ Usando configurações padrão de login.")
+        return {}
+
+
 def get_template_path(filename):
     """Retorna o caminho completo para um template"""
     return os.path.join(project_root, "backend", "actions", "templates", RALLY_ACTION, filename)
@@ -168,6 +190,123 @@ def execute_back(times=1, delay=0.3):
             time.sleep(delay)
         except Exception as e:
             print(f"⚠️ Erro ao executar BACK: {e}")
+
+
+def execute_login_with_fixed_template(account_index, account_name, login_sequence, login_scroll_config, device_id=DEVICE_ID):
+    """
+    Executa login usando template fixo e scroll cego (similar à estratégia de rally).
+    
+    Args:
+        account_index: Índice da conta (0-based)
+        account_name: Nome da conta para logging
+        login_sequence: Sequência de login carregada
+        login_scroll_config: Configuração de scroll de login
+        device_id: ID do dispositivo
+        
+    Returns:
+        bool: True se login bem-sucedido, False caso contrário
+    """
+    print(f"\n--- Fazendo login com template fixo: {account_name} (índice: {account_index}) ---")
+    
+    # 1. CLICAR NO ÍCONE DO GOOGLE (Passo 0)
+    print("🔘 Clicando no ícone do Google...")
+    if not execultar_acoes(LOGIN_ACTION, device_id=device_id, account_name="current", 
+                          sequence_override=[login_sequence[0]], fila_atual="Login"):
+        print("❌ Falha ao clicar no ícone do Google")
+        return False
+    
+    time.sleep(2.0)  # Aguarda tela de login carregar
+    
+    # 2. SCROLL CEGO (se necessário para contas 4+)
+    account_key = str(account_index + 1)  # Converte para 1-based
+    
+    if account_index >= 3:  # Contas 4+ (índice 3+)
+        if account_key in login_scroll_config:
+            config = login_scroll_config[account_key]
+            num_scrolls = config.get("num_scrolls", 1)
+            row_height = config.get("row_height", 230)
+            scroll_duration = config.get("scroll_duration", 1000)
+            start_y = config.get("start_y", 800)
+            center_x = config.get("center_x", 1200)
+        else:
+            print(f"⚠️ Configuração não encontrada para Conta {account_index + 1}. Usando padrão.")
+            num_scrolls = 1
+            row_height = 230
+            center_x = 1200
+            start_y = 800
+            scroll_duration = 1000
+        
+        end_y = start_y - row_height
+        
+        print(f"📜 Scroll Config para Conta {account_index + 1}:")
+        print(f"   • Scrolls: {num_scrolls}x")
+        print(f"   • Distância: {row_height}px (Y: {start_y} → {end_y})")
+        print(f"   • Duração: {scroll_duration}ms")
+        print(f"   • Posição X: {center_x}")
+        
+        try:
+            for i in range(num_scrolls):
+                simulate_scroll(device_id, start_coords=[center_x, start_y], 
+                              end_coords=[center_x, end_y], duration_ms=scroll_duration)
+                time.sleep(0.8)
+            time.sleep(0.5)
+        except Exception as e:
+            print(f"❌ Erro no scroll: {e}")
+            return False
+    
+    # 3. DETECTAR TEMPLATE FIXO E CLICAR
+    offset_y = login_scroll_config.get(account_key, {}).get("offset_y", LOGIN_OFFSET_CLICK_APOS_SCROLL)
+    screenshot_path = os.path.join(project_root, "temp_screenshots", "temp_screenshot_login.png")
+    
+    capture_screen(device_id, screenshot_path)
+    result = find_image_on_screen(screenshot_path, TEMPLATE_PREPARA_TELA_LOGIN)
+    
+    if result is None:
+        print(f"⚠️ Template fixo de login não encontrado.")
+        return False
+    
+    x, y, w, h = result
+    center_x = x + w // 2
+    center_y = y + h // 2
+    click_x = center_x
+    click_y = center_y + offset_y
+    
+    print(f"📍 Template encontrado em ({x}, {y}) | Centro: ({center_x}, {center_y})")
+    print(f"👆 Clicando na Conta {account_index + 1} → Centro Y ({center_y}) + Offset ({offset_y}) = {click_y}")
+    
+    # 4. GERAR IMAGEM DE DEBUG
+    try:
+        import cv2
+        debug_img = cv2.imread(screenshot_path)
+        if debug_img is not None:
+            # Retângulo verde ao redor do template
+            cv2.rectangle(debug_img, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            
+            # Círculo vermelho no ponto de clique
+            cv2.circle(debug_img, (click_x, click_y), 20, (0, 0, 255), -1)
+            
+            # Linha azul mostrando o offset
+            cv2.line(debug_img, (click_x, center_y), (click_x, click_y), (255, 0, 0), 2)
+            
+            # Texto informativo
+            cv2.putText(debug_img, f"Conta {account_index + 1} (+{offset_y})", 
+                       (click_x + 30, click_y), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 2)
+            
+            # Salvar imagem
+            debug_filename = os.path.join(project_root, "temp_screenshots", 
+                                         f"debug_login_conta_{account_index + 1}.png")
+            cv2.imwrite(debug_filename, debug_img)
+            print(f"🖼️  Debug salvo: {debug_filename}")
+    except Exception as e:
+        print(f"⚠️ Erro ao salvar debug visual: {e}")
+    
+    # 5. CLICAR NA CONTA
+    time.sleep(0.5)
+    simulate_touch(click_x, click_y, device_id=device_id)
+    time.sleep(2.0)  # Aguarda login completar
+    
+    print(f"✅ Login executado: {account_name}")
+    return True
 
 
 # ============================================================================
@@ -273,7 +412,7 @@ def processar_fila_unica(fila_num, rally_sequence, scroll_config, fila_atual):
 
 
 def processar_fila_para_conta(account, fila_num, login_sequence, logout_sequence, 
-                               rally_sequence, scroll_config):
+                               rally_sequence, scroll_config, login_scroll_config):
     """
     Processa uma fila específica para uma conta:
     Login → Entrar na fila → Logout
@@ -290,9 +429,21 @@ def processar_fila_para_conta(account, fila_num, login_sequence, logout_sequence
     
     start_time = time.time()
     
-    # 1. LOGIN
+    # 1. LOGIN COM TEMPLATE FIXO
     try:
-        if not execute_login_for_account(account, login_sequence, device_id=DEVICE_ID):
+        # Encontrar o índice da conta
+        account_index = None
+        for i, acc in enumerate(accounts):
+            if acc.get('name') == account_name:
+                account_index = i
+                break
+        
+        if account_index is None:
+            print(f"❌ Conta não encontrada: {account_name}")
+            return False
+        
+        if not execute_login_with_fixed_template(account_index, account_name, login_sequence, 
+                                                 login_scroll_config, device_id=DEVICE_ID):
             print(f"❌ Falha no login: {account_name}")
             return False
         print(f"✅ Login: {account_name}")
@@ -375,8 +526,13 @@ def main():
         return
     
     scroll_config = load_scroll_config()
+    login_scroll_config = load_login_scroll_config()
     
     print("✅ Todas as sequências carregadas")
+    if login_scroll_config:
+        print("✅ Configurações de scroll de login carregadas")
+    else:
+        print("⚠️ Usando configurações padrão de scroll de login")
     
     # ========================================================================
     # LOOP INFINITO - INTERCALADO POR FILA
@@ -418,7 +574,8 @@ def main():
                         login_sequence=login_sequence,
                         logout_sequence=logout_sequence,
                         rally_sequence=rally_sequence,
-                        scroll_config=scroll_config
+                        scroll_config=scroll_config,
+                        login_scroll_config=login_scroll_config
                     )
                     
                     if success:

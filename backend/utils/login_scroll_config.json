@@ -1,0 +1,92 @@
+{
+    "_comment": "Configuração de Scroll de Login - Similar à Estratégia de Fila de Rally",
+    "_description": "Configurações de scroll para contas 4+. Contas 1-3 usam offsets fixos sem scroll.",
+    "_instructions": {
+        "num_scrolls": "Quantidade de scrolls a executar (0 para contas 1-3)",
+        "offset_y": "Offset Y em pixels a partir do centro do template detectado",
+        "row_height": "Distância em pixels do scroll (quanto maior, mais sobe a lista)",
+        "scroll_duration": "Duração em ms (1000 = 1 segundo, valores menores = mais rápido)",
+        "start_y": "Coordenada Y inicial do scroll",
+        "center_x": "Coordenada X do scroll (centro da lista de contas)"
+    },
+    "accounts": {
+        "1": {
+            "_comment": "Conta 1 (login_gled) - Visível sem scroll",
+            "num_scrolls": 0,
+            "offset_y": 140
+        },
+        "2": {
+            "_comment": "Conta 2 (login_inf) - Visível sem scroll",
+            "num_scrolls": 0,
+            "offset_y": 360
+        },
+        "3": {
+            "_comment": "Conta 3 (login_cav) - Visível sem scroll",
+            "num_scrolls": 0,
+            "offset_y": 590
+        },
+        "4": {
+            "_comment": "Conta 4 (login_c52) - Primeiro scroll necessário",
+            "num_scrolls": 1,
+            "row_height": 230,
+            "scroll_duration": 1000,
+            "start_y": 800,
+            "center_x": 1200,
+            "offset_y": 650
+        },
+        "5": {
+            "_comment": "Conta 5 (login_c53) - Ajuste individual completo",
+            "num_scrolls": 1,
+            "row_height": 280,
+            "scroll_duration": 1000,
+            "start_y": 800,
+            "center_x": 1200,
+            "offset_y": 650
+        },
+        "6": {
+            "_comment": "Conta 6 (login_c54) - Ajuste individual completo",
+            "num_scrolls": 1,
+            "row_height": 430,
+            "scroll_duration": 1000,
+            "start_y": 800,
+            "center_x": 1200,
+            "offset_y": 650
+        },
+        "7": {
+            "_comment": "Conta 7 (login_c55) - Ajuste individual completo",
+            "num_scrolls": 1,
+            "row_height": 580,
+            "scroll_duration": 1000,
+            "start_y": 800,
+            "center_x": 1200,
+            "offset_y": 650
+        },
+        "8": {
+            "_comment": "Conta 8 (login_c56) - Ajuste individual completo",
+            "num_scrolls": 1,
+            "row_height": 730,
+            "scroll_duration": 1000,
+            "start_y": 800,
+            "center_x": 1200,
+            "offset_y": 650
+        },
+        "9": {
+            "_comment": "Conta 9 (login_c57) - Ajuste individual completo",
+            "num_scrolls": 1,
+            "row_height": 880,
+            "scroll_duration": 1000,
+            "start_y": 800,
+            "center_x": 1200,
+            "offset_y": 650
+        },
+        "10": {
+            "_comment": "Conta 10 (login_c58) - Máximo scroll necessário",
+            "num_scrolls": 1,
+            "row_height": 1030,
+            "scroll_duration": 1000,
+            "start_y": 800,
+            "center_x": 1200,
+            "offset_y": 650
+        }
+    }
+}
